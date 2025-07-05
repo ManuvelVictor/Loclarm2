@@ -1,0 +1,82 @@
+# Built application files
+*.apk
+*.ap_
+*.aab
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+build/
+
+# Gradle files
+.gradle/
+**/build/
+**/captures/
+.gradle/
+local.properties
+*.iml
+
+# Kotlin specific
+*.kts
+
+# IntelliJ / Android Studio
+.idea/
+*.iws
+*.ipr
+*.iml
+*.idb
+*.sw?
+
+# Keystore files
+*.jks
+*.keystore
+
+# Log files
+*.log
+
+# Mac OS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Firebase / Crashlytics
+fabric.properties
+crashlytics.properties
+crashlytics-build.properties
+
+# Misc
+*.tmp
+*.bak
+*.orig
+*.patch
+
+# Android Studio Navigation Editor temp files
+.navigation/
+
+# Jetpack Compose compiler artifacts
+.ui-state-cache/
+
+# Local configuration file (if exists)
+local.properties
+
+# NDK
+.cxx/
+
+# Gradle cache
+.gradle/
+build/
+
+# IDE run configurations
+.idea/runConfigurations
+
+# Test result caches
+test-results/
+

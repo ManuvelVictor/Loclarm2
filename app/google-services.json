@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "649660438917",
+    "project_id": "loclarm-e6943",
+    "storage_bucket": "loclarm-e6943.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:649660438917:android:ed5e8d3eda94eafa224cec",
+        "android_client_info": {
+          "package_name": "com.victor.loclarm2"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "649660438917-g042l9kp3rtppjlj6d1mabq37rjon1cd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.victor.loclarm2",
+            "certificate_hash": "39a13ed75feb577c31a24dde900c95d7fbd465ad"
+          }
+        },
+        {
+          "client_id": "649660438917-4j5apk4jtcq18rim85nira1c37blplng.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDx7HvRRlDJc6LImEchrxNhtFjVevFRiOA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "649660438917-4j5apk4jtcq18rim85nira1c37blplng.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
