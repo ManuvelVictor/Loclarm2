@@ -14,25 +14,23 @@ bin/
 gen/
 out/
 build/
+**/build/
+**/captures/
 
 # Gradle files
 .gradle/
-**/build/
-**/captures/
-.gradle/
 local.properties
-*.iml
-
-# Kotlin specific
-*.kts
 
 # IntelliJ / Android Studio
-.idea/
+.idea/caches/
+.idea/libraries/
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/misc.xml
+*.iml
 *.iws
 *.ipr
-*.iml
-*.idb
-*.sw?
 
 # Keystore files
 *.jks
@@ -47,10 +45,10 @@ local.properties
 # Windows
 Thumbs.db
 
-# Firebase / Crashlytics
-fabric.properties
-crashlytics.properties
-crashlytics-build.properties
+# Firebase / Crashlytics (optional, include if not sensitive)
+# fabric.properties
+# crashlytics.properties
+# crashlytics-build.properties
 
 # Misc
 *.tmp
@@ -64,19 +62,8 @@ crashlytics-build.properties
 # Jetpack Compose compiler artifacts
 .ui-state-cache/
 
-# Local configuration file (if exists)
-local.properties
-
 # NDK
 .cxx/
 
-# Gradle cache
-.gradle/
-build/
-
-# IDE run configurations
-.idea/runConfigurations
-
 # Test result caches
 test-results/
-
