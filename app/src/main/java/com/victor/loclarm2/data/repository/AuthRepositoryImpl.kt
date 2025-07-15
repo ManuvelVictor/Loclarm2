@@ -54,7 +54,7 @@ class AuthRepositoryImpl @Inject constructor(
         return try {
             val googleIdOption = GetGoogleIdOption.Builder()
                 .setFilterByAuthorizedAccounts(false)
-                .setServerClientId("YOUR_SERVER_CLIENT_ID") // Replace with your Web Client ID
+                .setServerClientId("649660438917-4j5apk4jtcq18rim85nira1c37blplng.apps.googleusercontent.com")
                 .build()
             val request = GetCredentialRequest.Builder()
                 .addCredentialOption(googleIdOption)

@@ -27,6 +27,9 @@ class AuthViewModel @Inject constructor(
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
 
     init {
         viewModelScope.launch {
@@ -36,6 +39,7 @@ class AuthViewModel @Inject constructor(
 
     fun register(email: String, password: String, username: String) {
         viewModelScope.launch {
+            _isLoading.value = true
             registerUseCase(email, password, username).fold(
                 onSuccess = { user ->
                     _user.value = user
@@ -45,11 +49,13 @@ class AuthViewModel @Inject constructor(
                     _errorMessage.value = e.message
                 }
             )
+            _isLoading.value = false
         }
     }
 
     fun loginWithEmail(email: String, password: String) {
         viewModelScope.launch {
+            _isLoading.value = true
             loginWithEmailUseCase(email, password).fold(
                 onSuccess = { user ->
                     _user.value = user
@@ -59,11 +65,13 @@ class AuthViewModel @Inject constructor(
                     _errorMessage.value = e.message
                 }
             )
+            _isLoading.value = false
         }
     }
 
     fun loginWithGoogle(context: Context) {
         viewModelScope.launch {
+            _isLoading.value = true
             loginWithGoogleUseCase(context).fold(
                 onSuccess = { user ->
                     _user.value = user
@@ -73,6 +81,7 @@ class AuthViewModel @Inject constructor(
                     _errorMessage.value = e.message
                 }
             )
+            _isLoading.value = false
         }
     }
 
