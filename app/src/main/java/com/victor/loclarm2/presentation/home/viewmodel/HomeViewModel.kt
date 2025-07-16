@@ -1,6 +1,7 @@
 package com.victor.loclarm2.presentation.home.viewmodel
 
 import android.content.Context
+import android.content.Intent
 import android.location.Geocoder
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
@@ -17,6 +18,9 @@ import com.victor.loclarm2.data.model.Alarm
 import com.victor.loclarm2.domain.model.Location
 import com.victor.loclarm2.domain.repository.AuthRepository
 import com.victor.loclarm2.domain.usecase.alarm.SaveAlarmUseCase
+import com.victor.loclarm2.data.geofence.AlarmServiceScheduler
+import com.victor.loclarm2.data.geofence.GeofenceHelper
+import com.victor.loclarm2.data.geofence.LocationForegroundService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,6 +48,20 @@ class HomeViewModel @Inject constructor(
 
     private val _searchResults = MutableStateFlow<List<String>>(emptyList())
     val searchResults: StateFlow<List<String>> = _searchResults
+
+    private val _selectedRadius = MutableStateFlow(1000f)
+    val selectedRadius: StateFlow<Float> = _selectedRadius
+    fun setSelectedRadius(radius: Float) {
+        _selectedRadius.value = radius
+    }
+    @Inject lateinit var alarmServiceScheduler: AlarmServiceScheduler
+    @Inject lateinit var geofenceHelper: GeofenceHelper
+
+    private val _selectedAlarmActive = MutableStateFlow(false)
+    val selectedAlarmActive: StateFlow<Boolean> = _selectedAlarmActive
+    fun setSelectedAlarmActive(active: Boolean) {
+        _selectedAlarmActive.value = active
+    }
 
 
     fun initializeLocation(context: Context) {
@@ -103,13 +121,20 @@ class HomeViewModel @Inject constructor(
 
     fun setSelectedLocation(latitude: Double, longitude: Double) {
         _selectedLocation.value = Location(latitude, longitude)
+        _selectedAlarmActive.value = false
     }
 
-    fun setShowBottomSheet(show: Boolean) {
+    fun setShowBottomSheet(show: Boolean, isCancelled: Boolean = false) {
         _showBottomSheet.value = show
+        if (!show && isCancelled) {
+            _selectedAlarmActive.value = false
+        }
     }
 
-    fun saveAlarm(name: String, radius: Float, isActive: Boolean) {
+    fun saveAlarm(context: Context, name: String, radius: Float, isActive: Boolean) {
+        val serviceIntent = Intent(context, LocationForegroundService::class.java)
+        ContextCompat.startForegroundService(context, serviceIntent)
+
         viewModelScope.launch {
             val user = authRepository.getCurrentUser() ?: return@launch
             val location = _selectedLocation.value ?: return@launch
@@ -123,6 +148,14 @@ class HomeViewModel @Inject constructor(
                 isActive = isActive
             )
             saveAlarmUseCase(alarm)
+            if (isActive) {
+                alarmServiceScheduler.scheduleLocationWorker(alarm)
+                val latLng = LatLng(location.latitude, location.longitude)
+                val pendingIntent = geofenceHelper.getPendingIntent()
+                geofenceHelper.addGeofence(latLng, radius, alarm.id, pendingIntent)
+                val serviceIntent = Intent(context, LocationForegroundService::class.java)
+                ContextCompat.startForegroundService(context, serviceIntent)
+            }
         }
     }
 }

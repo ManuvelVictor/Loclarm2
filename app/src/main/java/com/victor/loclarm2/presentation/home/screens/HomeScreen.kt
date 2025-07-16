@@ -1,5 +1,6 @@
 package com.victor.loclarm2.presentation.home.screens
 
+import android.app.Activity
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,6 +58,7 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.CameraPositionState
+import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
@@ -66,6 +68,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.victor.loclarm2.R
 import com.victor.loclarm2.presentation.home.viewmodel.HomeViewModel
 import com.victor.loclarm2.utils.GlassBox
+import com.victor.loclarm2.utils.requestForegroundServiceLocationPermission
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
@@ -90,6 +93,10 @@ fun HomeScreen(
     LaunchedEffect(Unit) {
         locationPermissionState.launchPermissionRequest()
         viewModel.initializeLocation(context)
+
+        if (context is Activity) {
+            requestForegroundServiceLocationPermission(context)
+        }
     }
 
     LaunchedEffect(currentLocation) {
@@ -121,29 +128,37 @@ fun HomeScreen(
             properties = mapProperties
         ) {
             selectedLocation?.let { loc ->
-                Marker(
-                    state = MarkerState(position = LatLng(loc.latitude, loc.longitude)),
-                    title = "Selected Location"
-                )
+                val center = LatLng(loc.latitude, loc.longitude)
+                Marker(state = MarkerState(position = center), title = "Selected Location")
+
+                val isActive = viewModel.selectedAlarmActive.collectAsState().value
+                if (isActive) {
+                    Circle(
+                        center = center,
+                        radius = viewModel.selectedRadius.collectAsState().value.toDouble(),
+                        strokeColor = Color.Blue,
+                        fillColor = Color.Blue.copy(alpha = 0.2f),
+                        strokeWidth = 2f
+                    )
+                }
             }
+
         }
 
         SearchAndLocationBar(viewModel, cameraPositionState, context)
 
         if (showBottomSheet) {
             SetAlarmBottomSheet(
+                viewModel,
                 onSave = { name, radius, isActive ->
                     scope.launch {
-                        viewModel.saveAlarm(name, radius, isActive)
-                        viewModel.setShowBottomSheet(false)
+                        viewModel.saveAlarm(context, name, radius, isActive)
+                        viewModel.setShowBottomSheet(false, isCancelled = false)
                     }
                 },
-                onDiscard = { viewModel.setShowBottomSheet(false) },
-                initialLatLng = LatLng(
-                    selectedLocation?.latitude ?: 0.0,
-                    selectedLocation?.longitude ?: 0.0
+                onDiscard = { viewModel.setShowBottomSheet(false, isCancelled = true)
+                },
                 )
-            )
         }
 
         Box(
@@ -264,9 +279,9 @@ fun SearchAndLocationBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetAlarmBottomSheet(
+    viewModel: HomeViewModel,
     onSave: (String, Float, Boolean) -> Unit,
-    onDiscard: () -> Unit,
-    initialLatLng: LatLng
+    onDiscard: () -> Unit
 ) {
     var alarmName by remember { mutableStateOf("") }
     var radius by remember { mutableFloatStateOf(1f) }
@@ -291,7 +306,10 @@ fun SetAlarmBottomSheet(
             Text("Radius (km): ${radius.toInt()}")
             Slider(
                 value = radius,
-                onValueChange = { radius = it },
+                onValueChange = {
+                    radius = it
+                    viewModel.setSelectedRadius(it * 1000f)
+                },
                 valueRange = 1f..50f,
                 steps = 49,
                 modifier = Modifier.fillMaxWidth()
@@ -306,7 +324,10 @@ fun SetAlarmBottomSheet(
                 Spacer(modifier = Modifier.width(8.dp))
                 Switch(
                     checked = isActive,
-                    onCheckedChange = { isActive = it },
+                    onCheckedChange = {
+                        isActive = it
+                        viewModel.setSelectedAlarmActive(it)
+                    },
                     modifier = Modifier.weight(1f)
                 )
             }

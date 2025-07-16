@@ -29,8 +29,8 @@ import androidx.compose.ui.unit.dp
 fun GlassBox(
     modifier: Modifier = Modifier,
     cornerRadius: Dp = 24.dp,
-    backgroundColor: Color = Color.Black.copy(alpha = 0.35f),
-    borderColor: Color = Color.Black.copy(alpha = 0.35f),
+    backgroundColor: Color = Color.Black.copy(alpha = 0.55f),
+    borderColor: Color = Color.Black.copy(alpha = 0.45f),
     content: @Composable BoxScope.() -> Unit
 ) {
     Box(
