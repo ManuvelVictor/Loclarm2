@@ -10,4 +10,5 @@ class SaveAlarmUseCase @Inject constructor(
     suspend operator fun invoke(alarm: Alarm): Result<Unit> {
         return alarmRepository.saveAlarm(alarm)
     }
+
 }
