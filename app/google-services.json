@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "649660438917-ch078vu5nj81alqnbmasu6cicqvuklk1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.victor.loclarm2",
+            "certificate_hash": "79abd2792a55c621a3779c7b365c2f196acfbdff"
+          }
+        },
+        {
           "client_id": "649660438917-g042l9kp3rtppjlj6d1mabq37rjon1cd.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

@@ -52,8 +52,11 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.material)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.work.runtime)
     // Firebase
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
@@ -84,6 +87,11 @@ dependencies {
 
     // Lottie
     implementation(libs.lottie.compose)
+
+    // Google Places
+    implementation(libs.google.places)
+
+    implementation(libs.androidbrowserhelper)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

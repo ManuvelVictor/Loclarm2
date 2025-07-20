@@ -39,7 +39,7 @@ fun Loclarm2Theme(
 ) {
     val colorScheme = when {
         darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        else -> DarkColorScheme
     }
 
     MaterialTheme(
