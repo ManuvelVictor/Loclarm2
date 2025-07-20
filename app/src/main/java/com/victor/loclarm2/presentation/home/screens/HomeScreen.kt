@@ -97,6 +97,9 @@ fun HomeScreen(
         if (context is Activity) {
             requestForegroundServiceLocationPermission(context)
         }
+
+        viewModel.fetchActiveAlarms()
+
     }
 
     LaunchedEffect(currentLocation) {
@@ -142,6 +145,20 @@ fun HomeScreen(
                     )
                 }
             }
+
+            val activeAlarms by viewModel.activeAlarms.collectAsState()
+
+            activeAlarms.forEach { alarm ->
+                val center = LatLng(alarm.latitude, alarm.longitude)
+                Circle(
+                    center = center,
+                    radius = alarm.radius.toDouble(),
+                    strokeColor = Color.Red,
+                    fillColor = Color.Red.copy(alpha = 0.2f),
+                    strokeWidth = 2f
+                )
+            }
+
 
         }
 

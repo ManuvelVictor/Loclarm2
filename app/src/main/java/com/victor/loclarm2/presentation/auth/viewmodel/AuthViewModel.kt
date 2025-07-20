@@ -3,6 +3,7 @@ package com.victor.loclarm2.presentation.auth.viewmodel
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.victor.loclarm2.data.local.DataStoreManager
 import com.victor.loclarm2.data.model.User
 import com.victor.loclarm2.domain.repository.AuthRepository
 import com.victor.loclarm2.domain.usecase.auth.LoginWithEmailUseCase
@@ -19,7 +20,8 @@ class AuthViewModel @Inject constructor(
     private val loginWithEmailUseCase: LoginWithEmailUseCase,
     private val registerUseCase: RegisterUseCase,
     private val loginWithGoogleUseCase: LoginWithGoogleUseCase,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val dataStoreManager: DataStoreManager
 ) : ViewModel() {
 
     private val _user = MutableStateFlow<User?>(null)
@@ -60,6 +62,7 @@ class AuthViewModel @Inject constructor(
                 onSuccess = { user ->
                     _user.value = user
                     _errorMessage.value = null
+                    dataStoreManager.setLoggedIn(true)
                 },
                 onFailure = { e ->
                     _errorMessage.value = e.message
@@ -89,6 +92,7 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             authRepository.logout()
             _user.value = null
+            dataStoreManager.setLoggedIn(false)
         }
     }
 }

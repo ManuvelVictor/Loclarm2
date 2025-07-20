@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.credentials.CredentialManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.victor.loclarm2.data.local.DataStoreManager
+import com.victor.loclarm2.data.local.SettingsDataStore
 import com.victor.loclarm2.data.repository.AlarmRepositoryImpl
 import com.victor.loclarm2.data.repository.AuthRepositoryImpl
 import com.victor.loclarm2.domain.repository.AlarmRepository
@@ -52,4 +54,21 @@ object AppModule {
     fun provideAlarmRepository(firestore: FirebaseFirestore): AlarmRepository {
         return AlarmRepositoryImpl(firestore)
     }
+
+    @Provides
+    @Singleton
+    fun provideDataStoreManager(@ApplicationContext context: Context): DataStoreManager {
+        return DataStoreManager(context)
+    }
+
+    @Module
+    @InstallIn(SingletonComponent::class)
+    object AppModule {
+        @Provides
+        @Singleton
+        fun provideSettingsDataStore(@ApplicationContext context: Context): SettingsDataStore {
+            return SettingsDataStore(context)
+        }
+    }
+
 }
