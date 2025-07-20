@@ -68,6 +68,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.victor.loclarm2.R
 import com.victor.loclarm2.presentation.home.viewmodel.HomeViewModel
 import com.victor.loclarm2.utils.GlassBox
+import com.victor.loclarm2.utils.NetworkAwareContent
 import com.victor.loclarm2.utils.requestForegroundServiceLocationPermission
 import kotlinx.coroutines.launch
 
@@ -78,17 +79,16 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
+    val selectedLocation by viewModel.selectedLocation.collectAsState()
+    val showBottomSheet by viewModel.showBottomSheet.collectAsState()
+    val currentLocation by viewModel.currentLocation.collectAsState()
+    val scope = rememberCoroutineScope()
     val locationPermissionState = rememberPermissionState(
         android.Manifest.permission.ACCESS_FINE_LOCATION
     )
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(LatLng(0.0, 0.0), 10f)
     }
-
-    val selectedLocation by viewModel.selectedLocation.collectAsState()
-    val showBottomSheet by viewModel.showBottomSheet.collectAsState()
-    val currentLocation by viewModel.currentLocation.collectAsState()
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         locationPermissionState.launchPermissionRequest()
@@ -116,73 +116,76 @@ fun HomeScreen(
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        GoogleMap(
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState,
-            onMapLongClick = { latLng ->
-                viewModel.setSelectedLocation(latLng.latitude, latLng.longitude)
-                viewModel.setShowBottomSheet(true)
-            },
-            uiSettings = MapUiSettings(
-                zoomControlsEnabled = false,
-                compassEnabled = false
-            ),
-            properties = mapProperties
-        ) {
-            selectedLocation?.let { loc ->
-                val center = LatLng(loc.latitude, loc.longitude)
-                Marker(state = MarkerState(position = center), title = "Selected Location")
+    NetworkAwareContent {
+        Box(modifier = Modifier.fillMaxSize()) {
+            GoogleMap(
+                modifier = Modifier.fillMaxSize(),
+                cameraPositionState = cameraPositionState,
+                onMapLongClick = { latLng ->
+                    viewModel.setSelectedLocation(latLng.latitude, latLng.longitude)
+                    viewModel.setShowBottomSheet(true)
+                },
+                uiSettings = MapUiSettings(
+                    zoomControlsEnabled = false,
+                    compassEnabled = false
+                ),
+                properties = mapProperties
+            ) {
+                selectedLocation?.let { loc ->
+                    val center = LatLng(loc.latitude, loc.longitude)
+                    Marker(state = MarkerState(position = center), title = "Selected Location")
 
-                val isActive = viewModel.selectedAlarmActive.collectAsState().value
-                if (isActive) {
+                    val isActive = viewModel.selectedAlarmActive.collectAsState().value
+                    if (isActive) {
+                        Circle(
+                            center = center,
+                            radius = viewModel.selectedRadius.collectAsState().value.toDouble(),
+                            strokeColor = Color.Blue,
+                            fillColor = Color.Blue.copy(alpha = 0.2f),
+                            strokeWidth = 2f
+                        )
+                    }
+                }
+
+                val activeAlarms by viewModel.activeAlarms.collectAsState()
+
+                activeAlarms.forEach { alarm ->
+                    val center = LatLng(alarm.latitude, alarm.longitude)
                     Circle(
                         center = center,
-                        radius = viewModel.selectedRadius.collectAsState().value.toDouble(),
-                        strokeColor = Color.Blue,
-                        fillColor = Color.Blue.copy(alpha = 0.2f),
+                        radius = alarm.radius.toDouble(),
+                        strokeColor = Color.Red,
+                        fillColor = Color.Red.copy(alpha = 0.2f),
                         strokeWidth = 2f
                     )
                 }
+
+
             }
 
-            val activeAlarms by viewModel.activeAlarms.collectAsState()
+            SearchAndLocationBar(viewModel, cameraPositionState, context)
 
-            activeAlarms.forEach { alarm ->
-                val center = LatLng(alarm.latitude, alarm.longitude)
-                Circle(
-                    center = center,
-                    radius = alarm.radius.toDouble(),
-                    strokeColor = Color.Red,
-                    fillColor = Color.Red.copy(alpha = 0.2f),
-                    strokeWidth = 2f
+            if (showBottomSheet) {
+                SetAlarmBottomSheet(
+                    viewModel,
+                    onSave = { name, radius, isActive ->
+                        scope.launch {
+                            viewModel.saveAlarm(context, name, radius, isActive)
+                            viewModel.setShowBottomSheet(false, isCancelled = false)
+                        }
+                    },
+                    onDiscard = {
+                        viewModel.setShowBottomSheet(false, isCancelled = true)
+                    },
                 )
             }
 
-
-        }
-
-        SearchAndLocationBar(viewModel, cameraPositionState, context)
-
-        if (showBottomSheet) {
-            SetAlarmBottomSheet(
-                viewModel,
-                onSave = { name, radius, isActive ->
-                    scope.launch {
-                        viewModel.saveAlarm(context, name, radius, isActive)
-                        viewModel.setShowBottomSheet(false, isCancelled = false)
-                    }
-                },
-                onDiscard = { viewModel.setShowBottomSheet(false, isCancelled = true)
-                },
-                )
-        }
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-        ) {
-            BottomNavigationBar(navController)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+            ) {
+                BottomNavigationBar(navController)
+            }
         }
     }
 }

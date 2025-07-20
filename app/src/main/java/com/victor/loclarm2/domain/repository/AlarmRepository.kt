@@ -5,4 +5,5 @@ import com.victor.loclarm2.data.model.Alarm
 interface AlarmRepository {
     suspend fun saveAlarm(alarm: Alarm): Result<Unit>
     suspend fun getAlarms(userId: String): Result<List<Alarm>>
+    suspend fun deleteAlarm(alarmId: String): Result<Unit>
 }

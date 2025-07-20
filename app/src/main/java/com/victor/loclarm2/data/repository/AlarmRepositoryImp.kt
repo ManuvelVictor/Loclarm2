@@ -31,4 +31,13 @@ class AlarmRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
+    override suspend fun deleteAlarm(alarmId: String): Result<Unit> {
+        return try {
+            firestore.collection("alarms").document(alarmId).delete().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

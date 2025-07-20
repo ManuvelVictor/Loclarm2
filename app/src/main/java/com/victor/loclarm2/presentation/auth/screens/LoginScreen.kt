@@ -41,6 +41,7 @@ import androidx.navigation.NavController
 import com.victor.loclarm2.R
 import com.victor.loclarm2.presentation.auth.viewmodel.AuthViewModel
 import com.victor.loclarm2.utils.GlassTextField
+import com.victor.loclarm2.utils.NetworkAwareContent
 import kotlinx.coroutines.launch
 
 @Composable
@@ -77,163 +78,169 @@ fun LoginScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Welcome Back!",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Image(
-            painter = painterResource(id = R.drawable.login_vector),
-            contentDescription = "Login illustration",
+    NetworkAwareContent {
+        Column(
             modifier = Modifier
-                .height(250.dp)
-                .fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        GlassTextField(
-            value = email.value,
-            onValueChange = { email.value = it },
-            label = "Email",
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        GlassTextField(
-            value = password.value,
-            onValueChange = { password.value = it },
-            label = "Password",
-            isPassword = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        errorMessage.value?.let {
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
-                text = it,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium
+                text = "Welcome Back!",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Image(
+                painter = painterResource(id = R.drawable.login_vector),
+                contentDescription = "Login illustration",
+                modifier = Modifier
+                    .height(250.dp)
+                    .fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
-        }
 
-        Button(
-            onClick = {
-                scope.launch {
-                    viewModel.loginWithEmail(email.value, password.value)
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
+            GlassTextField(
+                value = email.value,
+                onValueChange = { email.value = it },
+                label = "Email",
+                modifier = Modifier.fillMaxWidth()
             )
-        ) {
-            Text("Login")
-        }
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            HorizontalDivider(
-                modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                thickness = DividerDefaults.Thickness,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+            GlassTextField(
+                value = password.value,
+                onValueChange = { password.value = it },
+                label = "Password",
+                isPassword = true,
+                modifier = Modifier.fillMaxWidth()
             )
-            Text(
-                text = "or",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
-            HorizontalDivider(
-                modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                thickness = DividerDefaults.Thickness,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
-            )
-        }
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        IconButton(
-            onClick = {
-                scope.launch {
-                    viewModel.loginWithGoogle(context)
-                }
-            },
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .align(Alignment.CenterHorizontally)
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.ic_google_logo),
-                contentDescription = "Login with Google",
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TextButton(
-            onClick = { navController.navigate("register") },
-            colors = ButtonDefaults.textButtonColors(
-                contentColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Text("Don't have an account? Register")
-        }
-
-        if (isLoading.value) {
-            androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
-                Box(
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(MaterialTheme.shapes.medium)
-                        .padding(20.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
+            errorMessage.value?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(8.dp))
             }
-        }
 
-        if (showDialog) {
-            AlertDialog(
-                onDismissRequest = {
-                    showDialog = false
-                    if (user.value != null) {
-                        navController.navigate("home") {
-                            popUpTo("login") { inclusive = true }
-                        }
+            Button(
+                onClick = {
+                    scope.launch {
+                        viewModel.loginWithEmail(email.value, password.value)
                     }
                 },
-                confirmButton = {
-                    TextButton(onClick = {
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            ) {
+                Text("Login")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                HorizontalDivider(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp),
+                    thickness = DividerDefaults.Thickness,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+                )
+                Text(
+                    text = "or",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+                HorizontalDivider(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp),
+                    thickness = DividerDefaults.Thickness,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            IconButton(
+                onClick = {
+                    scope.launch {
+                        viewModel.loginWithGoogle(context)
+                    }
+                },
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .align(Alignment.CenterHorizontally)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_google_logo),
+                    contentDescription = "Login with Google",
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            TextButton(
+                onClick = { navController.navigate("register") },
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text("Don't have an account? Register")
+            }
+
+            if (isLoading.value) {
+                androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(MaterialTheme.shapes.medium)
+                            .padding(20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+            }
+
+            if (showDialog) {
+                AlertDialog(
+                    onDismissRequest = {
                         showDialog = false
                         if (user.value != null) {
                             navController.navigate("home") {
                                 popUpTo("login") { inclusive = true }
                             }
                         }
-                    }) {
-                        Text("OK")
-                    }
-                },
-                title = { Text("Login Status") },
-                text = { Text(dialogMessage) }
-            )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showDialog = false
+                            if (user.value != null) {
+                                navController.navigate("home") {
+                                    popUpTo("login") { inclusive = true }
+                                }
+                            }
+                        }) {
+                            Text("OK")
+                        }
+                    },
+                    title = { Text("Login Status") },
+                    text = { Text(dialogMessage) }
+                )
+            }
         }
     }
 }

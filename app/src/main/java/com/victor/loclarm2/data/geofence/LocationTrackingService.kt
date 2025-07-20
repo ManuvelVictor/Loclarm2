@@ -39,7 +39,7 @@ class LocationTrackingService : Service() {
     override fun onCreate() {
         super.onCreate()
 
-        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         vibrator = getSystemService(Vibrator::class.java)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
