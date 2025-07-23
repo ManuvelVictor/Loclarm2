@@ -3,6 +3,7 @@ package com.victor.loclarm2.presentation.home.viewmodel
 import android.content.Context
 import android.content.Intent
 import android.location.Geocoder
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,8 +15,8 @@ import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.maps.android.compose.CameraPositionState
-import com.victor.loclarm2.data.geofence.GeofenceHelper
-import com.victor.loclarm2.data.geofence.LocationTrackingService
+import com.victor.loclarm2.geofence.GeofenceHelper
+import com.victor.loclarm2.geofence.LocationTrackingService
 import com.victor.loclarm2.data.model.Alarm
 import com.victor.loclarm2.domain.model.Location
 import com.victor.loclarm2.domain.repository.AuthRepository
@@ -61,6 +62,8 @@ class HomeViewModel @Inject constructor(
 
     fun initializeLocation(context: Context) {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+        Log.d("PERMISSIONS", "Fine Location: ${ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED}")
+        Log.d("PERMISSIONS", "Background Location: ${ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED}")
         updateCurrentLocation(context)
     }
 
@@ -83,11 +86,24 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun fetchActiveAlarms() {
+    fun fetchActiveAlarms(context: Context) {
         viewModelScope.launch {
             val user = authRepository.getCurrentUser() ?: return@launch
-            alarmUseCase.getAlarms(user.id).onSuccess {
-                _activeAlarms.value = it
+            alarmUseCase.getAlarms(user.id).onSuccess { alarms ->
+                val activeAlarms = alarms.filter { it.active }
+                _activeAlarms.value = activeAlarms
+                val pendingIntent = geofenceHelper.getPendingIntent()
+                activeAlarms.forEach { alarm ->
+                    val latLng = LatLng(alarm.latitude, alarm.longitude)
+                    geofenceHelper.addGeofence(latLng, alarm.radius, alarm.id, pendingIntent)
+                }
+
+                if (activeAlarms.isNotEmpty()) {
+                    ContextCompat.startForegroundService(
+                        context,
+                        Intent(context, LocationTrackingService::class.java)
+                    )
+                }
             }
         }
     }
@@ -147,6 +163,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val user = authRepository.getCurrentUser() ?: return@launch
             val location = _selectedLocation.value ?: return@launch
+            Log.d("ALARM_SAVE", "Saving alarm: $name, Active: $isActive, Radius: $radius, Lat: ${location.latitude}, Lng: ${location.longitude}")
 
             val alarm = Alarm(
                 id = UUID.randomUUID().toString(),
@@ -159,16 +176,21 @@ class HomeViewModel @Inject constructor(
             )
 
             alarmUseCase.saveAlarm(alarm)
+            Log.d("ALARM_SAVE", "Saved alarm: $name, Active: $isActive, Radius: $radius")
 
             if (isActive) {
-                ContextCompat.startForegroundService(
-                    context,
-                    Intent(context, LocationTrackingService::class.java)
-                )
+                val serviceIntent = Intent(context, LocationTrackingService::class.java).apply {
+                    putExtra("destinationLat", location.latitude)
+                    putExtra("destinationLng", location.longitude)
+                    putExtra("radius", radius.toInt())
+                }
+                ContextCompat.startForegroundService(context, serviceIntent)
+                Log.d("ALARM_SAVE", "Started LocationTrackingService for alarm: ${alarm.id}")
 
                 val latLng = LatLng(location.latitude, location.longitude)
                 val pendingIntent = geofenceHelper.getPendingIntent()
                 geofenceHelper.addGeofence(latLng, radius, alarm.id, pendingIntent)
+                Log.d("ALARM_SAVE", "Added geofence for alarm: ${alarm.id}")
             }
         }
     }

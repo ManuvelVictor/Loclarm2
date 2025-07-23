@@ -137,7 +137,7 @@ fun GlassAlarmItem(
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 OutlinedButton(onClick = onDelete, colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
+                    contentColor = Color.White
                 )) {
                     Text("Delete")
                 }

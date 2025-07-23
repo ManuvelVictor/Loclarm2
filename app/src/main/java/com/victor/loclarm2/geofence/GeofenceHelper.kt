@@ -1,4 +1,4 @@
-package com.victor.loclarm2.data.geofence
+package com.victor.loclarm2.geofence
 
 import android.Manifest
 import android.app.PendingIntent
@@ -21,25 +21,25 @@ class GeofenceHelper @Inject constructor(
     private val geofencingClient = LocationServices.getGeofencingClient(context)
 
     fun addGeofence(latLng: LatLng, radius: Float, id: String, pendingIntent: PendingIntent) {
+        Log.d("GEOFENCE", "Adding geofence: ID=$id, Lat=${latLng.latitude}, Lng=${latLng.longitude}, Radius=$radius")
         val geofence = Geofence.Builder()
             .setRequestId(id)
             .setCircularRegion(latLng.latitude, latLng.longitude, radius)
             .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER)
             .setExpirationDuration(Geofence.NEVER_EXPIRE)
             .build()
-
         val request = GeofencingRequest.Builder()
             .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
             .addGeofence(geofence)
             .build()
-
-        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED
-        ) return
-
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
+            ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Log.e("GEOFENCE", "Missing location permissions")
+            return
+        }
         geofencingClient.addGeofences(request, pendingIntent)
-            .addOnSuccessListener { Log.d("GEOFENCE", "Added Successfully") }
-            .addOnFailureListener { Log.e("GEOFENCE", "Failed: ${it.message}") }
+            .addOnSuccessListener { Log.d("GEOFENCE", "Geofence added successfully for ID: $id") }
+            .addOnFailureListener { e -> Log.e("GEOFENCE", "Failed to add geofence for ID: $id, Error: ${e.message}") }
     }
 
     fun getPendingIntent(): PendingIntent {

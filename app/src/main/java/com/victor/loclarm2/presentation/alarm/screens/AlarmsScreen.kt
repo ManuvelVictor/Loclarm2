@@ -15,7 +15,6 @@ import com.victor.loclarm2.data.model.Alarm
 import com.victor.loclarm2.presentation.alarm.viewmodel.AlarmsViewModel
 import com.victor.loclarm2.presentation.home.screens.BottomNavigationBar
 import com.victor.loclarm2.utils.GlassAlarmItem
-
 import com.airbnb.lottie.compose.*
 import com.victor.loclarm2.utils.NetworkAwareContent
 
@@ -28,6 +27,8 @@ fun AlarmsScreen(
     val alarms by viewModel.alarms.collectAsState()
     var showBottomSheet by remember { mutableStateOf(false) }
     var selectedAlarm by remember { mutableStateOf<Alarm?>(null) }
+    var showDeleteConfirmSheet by remember { mutableStateOf(false) }
+    var alarmToDelete by remember { mutableStateOf<Alarm?>(null) }
 
     NetworkAwareContent {
         Scaffold(
@@ -74,7 +75,10 @@ fun AlarmsScreen(
                                     selectedAlarm = alarm
                                     showBottomSheet = true
                                 },
-                                onDelete = { viewModel.deleteAlarm(alarm.id) }
+                                onDelete = {
+                                    alarmToDelete = alarm
+                                    showDeleteConfirmSheet = true
+                                }
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                         }
@@ -92,6 +96,21 @@ fun AlarmsScreen(
                             viewModel.updateAlarm(updatedAlarm)
                             showBottomSheet = false
                             selectedAlarm = null
+                        }
+                    )
+                }
+
+                if (showDeleteConfirmSheet && alarmToDelete != null) {
+                    ConfirmDeleteBottomSheet(
+                        alarm = alarmToDelete!!,
+                        onConfirm = {
+                            viewModel.deleteAlarm(alarmToDelete!!.id)
+                            showDeleteConfirmSheet = false
+                            alarmToDelete = null
+                        },
+                        onDismiss = {
+                            showDeleteConfirmSheet = false
+                            alarmToDelete = null
                         }
                     )
                 }
@@ -158,6 +177,44 @@ fun EditAlarmBottomSheet(
                     onSave(updated)
                 }) {
                     Text("Save")
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ConfirmDeleteBottomSheet(
+    alarm: Alarm,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Delete Alarm", style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Are you sure you want to delete \"${alarm.name}\"?", style = MaterialTheme.typography.bodyMedium)
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+                Button(
+                    onClick = onConfirm,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
                 }
             }
         }

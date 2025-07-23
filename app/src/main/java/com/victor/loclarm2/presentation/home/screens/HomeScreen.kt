@@ -2,6 +2,9 @@ package com.victor.loclarm2.presentation.home.screens
 
 import android.app.Activity
 import android.content.Context
+import android.os.Build
+import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,9 +52,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
@@ -72,6 +77,7 @@ import com.victor.loclarm2.utils.NetworkAwareContent
 import com.victor.loclarm2.utils.requestForegroundServiceLocationPermission
 import kotlinx.coroutines.launch
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -86,33 +92,72 @@ fun HomeScreen(
     val locationPermissionState = rememberPermissionState(
         android.Manifest.permission.ACCESS_FINE_LOCATION
     )
+    val backgroundLocationPermissionState = rememberPermissionState(
+        android.Manifest.permission.ACCESS_BACKGROUND_LOCATION
+    )
+    val notificationPermissionState = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        rememberPermissionState(
+            android.Manifest.permission.POST_NOTIFICATIONS
+        )
+    } else {
+        null
+    }
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(LatLng(0.0, 0.0), 10f)
+        position = CameraPosition.fromLatLngZoom(LatLng(13.0827, 80.2707), 10f)
     }
 
-    LaunchedEffect(Unit) {
-        locationPermissionState.launchPermissionRequest()
-        viewModel.initializeLocation(context)
-
-        if (context is Activity) {
-            requestForegroundServiceLocationPermission(context)
+    LaunchedEffect(
+        locationPermissionState.status,
+        backgroundLocationPermissionState.status,
+        notificationPermissionState?.status
+    ) {
+        val isNotificationPermissionGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionState?.status?.isGranted == true
+        } else {
+            true // Notification permission not required below Android 13
         }
 
-        viewModel.fetchActiveAlarms()
-
+        if (locationPermissionState.status.isGranted &&
+            backgroundLocationPermissionState.status.isGranted &&
+            isNotificationPermissionGranted
+        ) {
+            Log.d("HOME_SCREEN", "Permissions granted: ACCESS_FINE_LOCATION, ACCESS_BACKGROUND_LOCATION, POST_NOTIFICATIONS")
+            viewModel.initializeLocation(context)
+            viewModel.fetchActiveAlarms(context)
+            if (context is Activity) {
+                requestForegroundServiceLocationPermission(context)
+            }
+        } else {
+            Log.w(
+                "HOME_SCREEN",
+                "Permissions not granted: Fine=${locationPermissionState.status.isGranted}, " +
+                        "Background=${backgroundLocationPermissionState.status.isGranted}, " +
+                        "Notifications=$isNotificationPermissionGranted"
+            )
+            if (!locationPermissionState.status.isGranted) {
+                locationPermissionState.launchPermissionRequest()
+            }
+            if (!backgroundLocationPermissionState.status.isGranted) {
+                backgroundLocationPermissionState.launchPermissionRequest()
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                notificationPermissionState?.status?.isGranted == false
+            ) {
+                notificationPermissionState.launchPermissionRequest()
+            }
+        }
     }
 
     LaunchedEffect(currentLocation) {
         currentLocation?.let { loc ->
+            Log.d("HOME_SCREEN", "Updating camera to current location: $loc")
             cameraPositionState.position = CameraPosition.fromLatLngZoom(loc, 14f)
         }
     }
 
-    val mapProperties = remember() {
+    val mapProperties = remember {
         MapProperties(
-            mapStyleOptions =
-                MapStyleOptions.loadRawResourceStyle(context, R.raw.map_dark_style)
-
+            mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.map_dark_style)
         )
     }
 
@@ -122,8 +167,13 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
                 onMapLongClick = { latLng ->
-                    viewModel.setSelectedLocation(latLng.latitude, latLng.longitude)
-                    viewModel.setShowBottomSheet(true)
+                    if (latLng.latitude in -90.0..90.0 && latLng.longitude in -180.0..180.0) {
+                        Log.d("HOME_SCREEN", "Map long-clicked at: $latLng")
+                        viewModel.setSelectedLocation(latLng.latitude, latLng.longitude)
+                        viewModel.setShowBottomSheet(true)
+                    } else {
+                        Log.w("HOME_SCREEN", "Invalid LatLng: $latLng")
+                    }
                 },
                 uiSettings = MapUiSettings(
                     zoomControlsEnabled = false,
@@ -148,7 +198,6 @@ fun HomeScreen(
                 }
 
                 val activeAlarms by viewModel.activeAlarms.collectAsState()
-
                 activeAlarms.forEach { alarm ->
                     val center = LatLng(alarm.latitude, alarm.longitude)
                     Circle(
@@ -159,8 +208,6 @@ fun HomeScreen(
                         strokeWidth = 2f
                     )
                 }
-
-
             }
 
             SearchAndLocationBar(viewModel, cameraPositionState, context)
@@ -170,13 +217,15 @@ fun HomeScreen(
                     viewModel,
                     onSave = { name, radius, isActive ->
                         scope.launch {
+                            Log.d("HOME_SCREEN", "Saving alarm: name=$name, radius=$radius, isActive=$isActive")
                             viewModel.saveAlarm(context, name, radius, isActive)
                             viewModel.setShowBottomSheet(false, isCancelled = false)
                         }
                     },
                     onDiscard = {
+                        Log.d("HOME_SCREEN", "Discarding alarm")
                         viewModel.setShowBottomSheet(false, isCancelled = true)
-                    },
+                    }
                 )
             }
 
@@ -203,7 +252,9 @@ fun SearchAndLocationBar(
 
     LaunchedEffect(viewModelSearchResults.value) {
         searchResults = viewModelSearchResults.value
+        Log.d("HOME_SCREEN", "Search results updated: $searchResults")
     }
+
     Column(
         modifier = Modifier
             .padding(horizontal = 20.dp, vertical = 60.dp)
@@ -233,6 +284,7 @@ fun SearchAndLocationBar(
                     value = query,
                     onValueChange = {
                         query = it
+                        Log.d("HOME_SCREEN", "Search query: $it")
                         viewModel.searchLocation(it, context)
                     },
                     placeholder = { Text("Alarm location?..") },
@@ -243,13 +295,14 @@ fun SearchAndLocationBar(
                         unfocusedPlaceholderColor = MaterialTheme.colorScheme.primary,
                         focusedPlaceholderColor = Color.Transparent,
                         unfocusedBorderColor = Color.Transparent,
-                        focusedBorderColor = Color.Transparent,
+                        focusedBorderColor = Color.Transparent
                     )
                 )
 
                 Spacer(modifier = Modifier.width(8.dp))
 
                 IconButton(onClick = {
+                    Log.d("HOME_SCREEN", "Updating current location")
                     viewModel.updateCurrentLocation(context, cameraPositionState)
                     searchResults = emptyList()
                 }) {
@@ -275,9 +328,11 @@ fun SearchAndLocationBar(
                         OutlinedButton(
                             onClick = {
                                 query = placeName
+                                Log.d("HOME_SCREEN", "Selected search result: $placeName")
                                 viewModel.searchLocation(placeName, context)
                                 scope.launch {
                                     val latLng = viewModel.getLatLngFromPlace(placeName, context)
+                                    Log.d("HOME_SCREEN", "Moving camera to: $latLng")
                                     cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
                                     searchResults = emptyList()
                                 }
@@ -308,7 +363,7 @@ fun SetAlarmBottomSheet(
     var isActive by remember { mutableStateOf(false) }
 
     ModalBottomSheet(
-        onDismissRequest = { onDiscard() },
+        onDismissRequest = { onDiscard() }
     ) {
         Column(
             modifier = Modifier
@@ -329,6 +384,7 @@ fun SetAlarmBottomSheet(
                 onValueChange = {
                     radius = it
                     viewModel.setSelectedRadius(it * 1000f)
+                    Log.d("HOME_SCREEN", "Radius set to: ${it * 1000f} meters")
                 },
                 valueRange = 1f..50f,
                 steps = 49,
@@ -347,6 +403,7 @@ fun SetAlarmBottomSheet(
                     onCheckedChange = {
                         isActive = it
                         viewModel.setSelectedAlarmActive(it)
+                        Log.d("HOME_SCREEN", "Alarm active state: $it")
                     },
                     modifier = Modifier.weight(1f)
                 )
@@ -361,7 +418,11 @@ fun SetAlarmBottomSheet(
                     Text("Discard")
                 }
                 Button(onClick = {
-                    onSave(alarmName, radius * 1000f, isActive)
+                    if (alarmName.isNotBlank()) {
+                        onSave(alarmName, radius * 1000f, isActive)
+                    } else {
+                        Log.w("HOME_SCREEN", "Alarm name is empty, not saving")
+                    }
                 }) {
                     Text("Save")
                 }
