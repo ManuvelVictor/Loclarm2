@@ -3,7 +3,7 @@ package com.victor.loclarm2.geofence
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
-import com.victor.loclarm2.presentation.alarmRing.AlarmService
+import com.victor.loclarm2.geofence.AlarmService
 
 object AlarmTriggerHelper {
     fun triggerAlarm(context: Context, alarmId: String) {

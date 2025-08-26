@@ -46,6 +46,7 @@ class AuthViewModel @Inject constructor(
                 onSuccess = { user ->
                     _user.value = user
                     _errorMessage.value = null
+                    dataStoreManager.setLoggedIn(true)
                 },
                 onFailure = { e ->
                     _errorMessage.value = e.message
@@ -79,6 +80,7 @@ class AuthViewModel @Inject constructor(
                 onSuccess = { user ->
                     _user.value = user
                     _errorMessage.value = null
+                    dataStoreManager.setLoggedIn(true)
                 },
                 onFailure = { e ->
                     _errorMessage.value = e.message

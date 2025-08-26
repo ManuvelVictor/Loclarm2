@@ -58,22 +58,24 @@ fun LoginScreen(
     val isLoading = viewModel.isLoading.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
     var dialogMessage by remember { mutableStateOf("") }
+    var hasAttemptedLogin by remember { mutableStateOf(false) }
 
-    LaunchedEffect(user.value, errorMessage.value) {
-        if (user.value != null) {
-            dialogMessage = "Login successful!"
-            showDialog = true
-        } else if (!errorMessage.value.isNullOrEmpty()) {
-            dialogMessage = errorMessage.value ?: "Something went wrong"
-            showDialog = true
+    LaunchedEffect(user.value) {
+        if (user.value != null && !hasAttemptedLogin) {
+            navController.navigate("home") {
+                popUpTo("login") { inclusive = true }
+            }
         }
     }
 
-
-    LaunchedEffect(user.value) {
-        if (user.value != null) {
-            navController.navigate("home") {
-                popUpTo("login") { inclusive = true }
+    LaunchedEffect(user.value, errorMessage.value, hasAttemptedLogin) {
+        if (hasAttemptedLogin) {
+            if (user.value != null) {
+                dialogMessage = "Login successful!"
+                showDialog = true
+            } else if (!errorMessage.value.isNullOrEmpty()) {
+                dialogMessage = errorMessage.value ?: "Something went wrong"
+                showDialog = true
             }
         }
     }
@@ -106,7 +108,8 @@ fun LoginScreen(
                 value = email.value,
                 onValueChange = { email.value = it },
                 label = "Email",
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isPassword = false
             )
             Spacer(modifier = Modifier.height(8.dp))
 

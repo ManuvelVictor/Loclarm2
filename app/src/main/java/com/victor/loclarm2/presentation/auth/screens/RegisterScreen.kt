@@ -27,6 +27,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -101,7 +102,8 @@ fun RegisterScreen(
                 value = username.value,
                 onValueChange = { username.value = it },
                 label = "Username",
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isPassword = false
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -109,7 +111,8 @@ fun RegisterScreen(
                 value = email.value,
                 onValueChange = { email.value = it },
                 label = "Email",
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isPassword = false
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -117,7 +120,8 @@ fun RegisterScreen(
                 value = password.value,
                 onValueChange = { password.value = it },
                 label = "Password",
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isPassword = true
             )
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -147,7 +151,8 @@ fun RegisterScreen(
                     Box(
                         modifier = Modifier
                             .size(100.dp)
-                            .background(Color.White, shape = MaterialTheme.shapes.medium),
+                            .clip(MaterialTheme.shapes.medium)
+                            .padding(20.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()

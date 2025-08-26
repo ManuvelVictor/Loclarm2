@@ -9,7 +9,7 @@ import com.google.android.gms.location.GeofencingClient
 import com.google.android.gms.location.LocationServices
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.victor.loclarm2.presentation.alarmRing.AlarmService
+import com.victor.loclarm2.geofence.AlarmService
 
 class DismissAlarmReceiver : BroadcastReceiver() {
 

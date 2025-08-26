@@ -1,4 +1,4 @@
-package com.victor.loclarm2.presentation.alarmRing
+package com.victor.loclarm2.geofence
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -14,7 +14,6 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.victor.loclarm2.R
-import com.victor.loclarm2.geofence.DismissAlarmReceiver
 import com.victor.loclarm2.presentation.MainActivity
 
 class AlarmService : Service() {

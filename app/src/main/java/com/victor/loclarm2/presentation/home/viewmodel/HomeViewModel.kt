@@ -3,7 +3,6 @@ package com.victor.loclarm2.presentation.home.viewmodel
 import android.content.Context
 import android.content.Intent
 import android.location.Geocoder
-import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -21,6 +20,7 @@ import com.victor.loclarm2.data.model.Alarm
 import com.victor.loclarm2.domain.model.Location
 import com.victor.loclarm2.domain.repository.AuthRepository
 import com.victor.loclarm2.domain.usecase.alarm.AlarmsUseCase
+import com.victor.loclarm2.presentation.home.screens.getFromLocationNameAsync
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -62,8 +62,6 @@ class HomeViewModel @Inject constructor(
 
     fun initializeLocation(context: Context) {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-        Log.d("PERMISSIONS", "Fine Location: ${ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED}")
-        Log.d("PERMISSIONS", "Background Location: ${ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED}")
         updateCurrentLocation(context)
     }
 
@@ -129,12 +127,16 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun getLatLngFromPlace(placeName: String, context: Context): LatLng {
-        val geocoder = Geocoder(context)
-        val addresses = geocoder.getFromLocationName(placeName, 1)
-        return if (!addresses.isNullOrEmpty()) {
-            LatLng(addresses[0].latitude, addresses[0].longitude)
-        } else {
+    suspend fun getLatLngFromPlace(placeName: String, context: Context): LatLng {
+        return try {
+            val geocoder = Geocoder(context)
+            val addresses = geocoder.getFromLocationNameAsync(placeName, 1)
+            if (addresses.isNotEmpty()) {
+                LatLng(addresses[0].latitude, addresses[0].longitude)
+            } else {
+                LatLng(0.0, 0.0)
+            }
+        } catch (_: Exception) {
             LatLng(0.0, 0.0)
         }
     }
@@ -163,8 +165,6 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val user = authRepository.getCurrentUser() ?: return@launch
             val location = _selectedLocation.value ?: return@launch
-            Log.d("ALARM_SAVE", "Saving alarm: $name, Active: $isActive, Radius: $radius, Lat: ${location.latitude}, Lng: ${location.longitude}")
-
             val alarm = Alarm(
                 id = UUID.randomUUID().toString(),
                 name = name,
@@ -176,7 +176,6 @@ class HomeViewModel @Inject constructor(
             )
 
             alarmUseCase.saveAlarm(alarm)
-            Log.d("ALARM_SAVE", "Saved alarm: $name, Active: $isActive, Radius: $radius")
 
             if (isActive) {
                 val serviceIntent = Intent(context, LocationTrackingService::class.java).apply {
@@ -185,12 +184,10 @@ class HomeViewModel @Inject constructor(
                     putExtra("radius", radius.toInt())
                 }
                 ContextCompat.startForegroundService(context, serviceIntent)
-                Log.d("ALARM_SAVE", "Started LocationTrackingService for alarm: ${alarm.id}")
 
                 val latLng = LatLng(location.latitude, location.longitude)
                 val pendingIntent = geofenceHelper.getPendingIntent()
                 geofenceHelper.addGeofence(latLng, radius, alarm.id, pendingIntent)
-                Log.d("ALARM_SAVE", "Added geofence for alarm: ${alarm.id}")
             }
         }
     }
