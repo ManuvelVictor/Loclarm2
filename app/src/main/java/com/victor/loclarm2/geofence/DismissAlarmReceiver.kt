@@ -18,11 +18,9 @@ class DismissAlarmReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d(TAG, "DismissAlarmReceiver triggered")
 
         val userId = FirebaseAuth.getInstance().currentUser?.uid
         if (userId == null) {
-            Log.e(TAG, "No user logged in, cannot dismiss alarms")
             return
         }
 
@@ -46,35 +44,19 @@ class DismissAlarmReceiver : BroadcastReceiver() {
                             .document(alarmId)
                             .update("isActive", false)
                             .addOnSuccessListener {
-                                Log.d(TAG, "Deactivated alarm: $alarmId")
-                            }
-                            .addOnFailureListener { e ->
-                                Log.e(TAG, "Failed to deactivate alarm $alarmId: ${e.message}")
                             }
                     }
 
                     if (alarmIds.isNotEmpty()) {
                         geofencingClient.removeGeofences(alarmIds)
-                            .addOnSuccessListener {
-                                Log.d(TAG, "Removed geofences for alarms: $alarmIds")
-                            }
-                            .addOnFailureListener { e ->
-                                Log.e(TAG, "Failed to remove geofences: ${e.message}")
-                            }
                     }
                 }
             }
-            .addOnFailureListener { e ->
-                Log.e(TAG, "Failed to query active alarms: ${e.message}")
-            }
 
         notificationManager.cancelAll()
-        Log.d(TAG, "Cleared all notifications")
 
         context.stopService(Intent(context, LocationTrackingService::class.java))
-        Log.d(TAG, "Stopped LocationTrackingService")
 
         context.stopService(Intent(context, AlarmService::class.java))
-        Log.d(TAG, "Stopped AlarmService")
     }
 }

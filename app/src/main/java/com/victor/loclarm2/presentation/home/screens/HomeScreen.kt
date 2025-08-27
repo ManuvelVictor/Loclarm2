@@ -143,31 +143,16 @@ fun HomeScreen(
                         viewModel.setShowBottomSheet(true)
                     }
                 },
-                uiSettings = MapUiSettings(
-                    zoomControlsEnabled = false,
-                    compassEnabled = false
-                ),
+                uiSettings = MapUiSettings(zoomControlsEnabled = false, compassEnabled = false),
                 properties = mapProperties
             ) {
-                selectedLocation?.let { loc ->
-                    val center = LatLng(loc.latitude, loc.longitude)
-                    Marker(state = MarkerState(position = center), title = "Selected Location")
-
-                    val isActive = viewModel.selectedAlarmActive.collectAsState().value
-                    if (isActive) {
-                        Circle(
-                            center = center,
-                            radius = viewModel.selectedRadius.collectAsState().value.toDouble(),
-                            strokeColor = Color.Blue,
-                            fillColor = Color.Blue.copy(alpha = 0.2f),
-                            strokeWidth = 2f
-                        )
-                    }
-                }
-
                 val activeAlarms by viewModel.activeAlarms.collectAsState()
                 activeAlarms.forEach { alarm ->
                     val center = LatLng(alarm.latitude, alarm.longitude)
+                    Marker(
+                        state = MarkerState(position = center),
+                        title = alarm.name
+                    )
                     Circle(
                         center = center,
                         radius = alarm.radius.toDouble(),
@@ -177,7 +162,6 @@ fun HomeScreen(
                     )
                 }
             }
-
             SearchAndLocationBar(viewModel, cameraPositionState, context)
 
             if (showBottomSheet) {
