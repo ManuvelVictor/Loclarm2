@@ -7,5 +7,5 @@ data class Alarm(
     val longitude: Double = 0.0,
     val radius: Float = 100f,
     val userId: String = "",
-    val isActive: Boolean = false
+    val active: Boolean = false
 )

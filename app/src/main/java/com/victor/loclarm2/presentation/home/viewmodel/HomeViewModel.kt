@@ -3,7 +3,6 @@ package com.victor.loclarm2.presentation.home.viewmodel
 import android.content.Context
 import android.content.Intent
 import android.location.Geocoder
-import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -15,14 +14,13 @@ import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.maps.android.compose.CameraPositionState
+import com.victor.loclarm2.geofence.GeofenceHelper
+import com.victor.loclarm2.geofence.LocationTrackingService
 import com.victor.loclarm2.data.model.Alarm
-import com.victor.loclarm2.data.geofence.GeofenceHelper
-import com.victor.loclarm2.data.geofence.LocationTrackingService
 import com.victor.loclarm2.domain.model.Location
 import com.victor.loclarm2.domain.repository.AuthRepository
-import com.victor.loclarm2.domain.usecase.alarm.GetAlarmsUseCase
-import com.victor.loclarm2.domain.usecase.alarm.SaveAlarmUseCase
-
+import com.victor.loclarm2.domain.usecase.alarm.AlarmsUseCase
+import com.victor.loclarm2.presentation.home.screens.getFromLocationNameAsync
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,10 +31,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val saveAlarmUseCase: SaveAlarmUseCase,
+    private val alarmUseCase: AlarmsUseCase,
     private val authRepository: AuthRepository,
     private val geofenceHelper: GeofenceHelper,
-    private val getAlarmUseCase: GetAlarmsUseCase,
 ) : ViewModel() {
 
     private val _selectedLocation = MutableStateFlow<Location?>(null)
@@ -81,22 +78,34 @@ class HomeViewModel @Inject constructor(
                         _currentLocation.value = latLng
                         cameraPositionState?.position = CameraPosition.fromLatLngZoom(latLng, 10f)
                     }
-                } catch (_: Exception) { }
+                } catch (_: Exception) {
+                }
             }
         }
     }
 
-    fun fetchActiveAlarms() {
+    fun fetchActiveAlarms(context: Context) {
         viewModelScope.launch {
             val user = authRepository.getCurrentUser() ?: return@launch
-            getAlarmUseCase(user.id).fold(
-                onSuccess = { alarms ->
-                    _activeAlarms.value = alarms
-                },
-                onFailure = { }
-            )
+            alarmUseCase.getAlarms(user.id).onSuccess { alarms ->
+                val activeAlarms = alarms.filter { it.active }
+                _activeAlarms.value = activeAlarms
+                val pendingIntent = geofenceHelper.getPendingIntent()
+                activeAlarms.forEach { alarm ->
+                    val latLng = LatLng(alarm.latitude, alarm.longitude)
+                    geofenceHelper.addGeofence(latLng, alarm.radius, alarm.id, pendingIntent)
+                }
+
+                if (activeAlarms.isNotEmpty()) {
+                    ContextCompat.startForegroundService(
+                        context,
+                        Intent(context, LocationTrackingService::class.java)
+                    )
+                }
+            }
         }
     }
+
     fun searchLocation(query: String, context: Context) {
         viewModelScope.launch {
             if (query.isNotEmpty()) {
@@ -106,7 +115,8 @@ class HomeViewModel @Inject constructor(
                     .build()
                 try {
                     val response = placesClient.findAutocompletePredictions(request).await()
-                    val predictions = response.autocompletePredictions.map { it.getFullText(null).toString() }
+                    val predictions =
+                        response.autocompletePredictions.map { it.getFullText(null).toString() }
                     _searchResults.value = predictions
                 } catch (_: Exception) {
                     _searchResults.value = emptyList()
@@ -117,12 +127,16 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun getLatLngFromPlace(placeName: String, context: Context): LatLng {
-        val geocoder = Geocoder(context)
-        val addresses = geocoder.getFromLocationName(placeName, 1)
-        return if (!addresses.isNullOrEmpty()) {
-            LatLng(addresses[0].latitude, addresses[0].longitude)
-        } else {
+    suspend fun getLatLngFromPlace(placeName: String, context: Context): LatLng {
+        return try {
+            val geocoder = Geocoder(context)
+            val addresses = geocoder.getFromLocationNameAsync(placeName, 1)
+            if (addresses.isNotEmpty()) {
+                LatLng(addresses[0].latitude, addresses[0].longitude)
+            } else {
+                LatLng(0.0, 0.0)
+            }
+        } catch (_: Exception) {
             LatLng(0.0, 0.0)
         }
     }
@@ -151,7 +165,6 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val user = authRepository.getCurrentUser() ?: return@launch
             val location = _selectedLocation.value ?: return@launch
-
             val alarm = Alarm(
                 id = UUID.randomUUID().toString(),
                 name = name,
@@ -159,16 +172,18 @@ class HomeViewModel @Inject constructor(
                 longitude = location.longitude,
                 radius = radius,
                 userId = user.id,
-                isActive = isActive
+                active = isActive
             )
 
-            saveAlarmUseCase(alarm)
+            alarmUseCase.saveAlarm(alarm)
 
             if (isActive) {
-                ContextCompat.startForegroundService(
-                    context,
-                    Intent(context, LocationTrackingService::class.java)
-                )
+                val serviceIntent = Intent(context, LocationTrackingService::class.java).apply {
+                    putExtra("destinationLat", location.latitude)
+                    putExtra("destinationLng", location.longitude)
+                    putExtra("radius", radius.toInt())
+                }
+                ContextCompat.startForegroundService(context, serviceIntent)
 
                 val latLng = LatLng(location.latitude, location.longitude)
                 val pendingIntent = geofenceHelper.getPendingIntent()

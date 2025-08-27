@@ -1,10 +1,13 @@
 package com.victor.loclarm2.presentation.settings.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.victor.loclarm2.data.local.SettingsDataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -13,54 +16,81 @@ class SettingsViewModel @Inject constructor(
     private val dataStore: SettingsDataStore
 ) : ViewModel() {
 
-    val language = dataStore.language.stateIn(viewModelScope, SharingStarted.Lazily, "English")
-    val units = dataStore.units.stateIn(viewModelScope, SharingStarted.Lazily, "Metric")
+    val language: StateFlow<String> = dataStore.language.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Lazily,
+        initialValue = "English"
+    )
 
-    private val _ringtone = MutableStateFlow("Select Ringtone")
-    val ringtone: StateFlow<String> = _ringtone
+    val units: StateFlow<String> = dataStore.units.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Lazily,
+        initialValue = "Metric"
+    )
 
-    private val _volume = MutableStateFlow(5f)
-    val volume: StateFlow<Float> = _volume
+    val ringtone: StateFlow<String> = dataStore.ringtone.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Lazily,
+        initialValue = "Select Ringtone"
+    )
 
-    private val _vibration = MutableStateFlow(true)
-    val vibration: StateFlow<Boolean> = _vibration
+    val volume: StateFlow<Float> = dataStore.volume.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Lazily,
+        initialValue = 5f
+    )
 
-    init {
+    val vibration: StateFlow<Boolean> = dataStore.vibration.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Lazily,
+        initialValue = true
+    )
+
+    fun setRingtone(newUri: String) {
         viewModelScope.launch {
-            dataStore.ringtone.collect {
-                _ringtone.value = it
-            }
-            dataStore.volume.collect {
-                _volume.value = it
-            }
-            dataStore.vibration.collect {
-                _vibration.value = it
-            }
+            dataStore.saveSettings(
+                language = language.value,
+                units = units.value,
+                ringtone = newUri,
+                volume = volume.value,
+                vibration = vibration.value
+            )
         }
     }
 
-    fun setRingtone(newUri: String) {
-        _ringtone.value = newUri
-    }
-
     fun setVolume(newVolume: Float) {
-        _volume.value = newVolume
+        viewModelScope.launch {
+            dataStore.saveSettings(
+                language = language.value,
+                units = units.value,
+                ringtone = ringtone.value,
+                volume = newVolume,
+                vibration = vibration.value
+            )
+        }
     }
 
     fun setVibration(enabled: Boolean) {
-        _vibration.value = enabled
+        viewModelScope.launch {
+            dataStore.saveSettings(
+                language = language.value,
+                units = units.value,
+                ringtone = ringtone.value,
+                volume = volume.value,
+                vibration = enabled
+            )
+        }
     }
 
     fun saveSettings(
         language: String,
         units: String,
-        ringtone: String = _ringtone.value,
-        volume: Float = _volume.value,
-        vibration: Boolean = _vibration.value
+        ringtone: String,
+        volume: Float,
+        vibration: Boolean
     ) {
         viewModelScope.launch {
             dataStore.saveSettings(language, units, ringtone, volume, vibration)
         }
     }
 }
-
