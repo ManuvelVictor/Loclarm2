@@ -4,6 +4,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,10 +18,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.victor.loclarm2.data.local.DataStoreManager
+import com.victor.loclarm2.data.model.Alarm
 import com.victor.loclarm2.presentation.alarm.screens.AlarmsScreen
 import com.victor.loclarm2.presentation.auth.screens.LoginScreen
 import com.victor.loclarm2.presentation.auth.screens.RegisterScreen
 import com.victor.loclarm2.presentation.home.screens.HomeScreen
+import com.victor.loclarm2.presentation.home.viewmodel.HomeViewModel
 import com.victor.loclarm2.presentation.settings.screens.SettingsScreen
 import com.victor.loclarm2.ui.theme.Loclarm2Theme
 import dagger.hilt.android.AndroidEntryPoint
@@ -30,6 +33,8 @@ import jakarta.inject.Inject
 class MainActivity : ComponentActivity() {
     @Inject
     lateinit var dataStoreManager: DataStoreManager
+
+    private val homeViewModel: HomeViewModel by viewModels()
 
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,6 +54,10 @@ class MainActivity : ComponentActivity() {
                             "login"
                         }
                         isLoading = false
+
+                        if (startDestination == "home") {
+                            handleAlarmDialogIntent()
+                        }
                     }
 
                     if (isLoading) {
@@ -64,13 +73,52 @@ class MainActivity : ComponentActivity() {
                             composable("login") {
                                 LoginScreen(navController)
                             }
-                            composable("register") { RegisterScreen(navController) }
-                            composable("home") { HomeScreen(navController) }
-                            composable("alarms") { AlarmsScreen(navController) }
-                            composable("settings") { SettingsScreen(navController) }
+                            composable("register") {
+                                RegisterScreen(navController)
+                            }
+                            composable("home") {
+                                HomeScreen(navController, homeViewModel)
+
+                                LaunchedEffect(Unit) {
+                                    handleAlarmDialogIntent()
+                                }
+                            }
+                            composable("alarms") {
+                                AlarmsScreen(navController)
+                            }
+                            composable("settings") {
+                                SettingsScreen(navController)
+                            }
                         }
                     }
                 }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleAlarmDialogIntent()
+    }
+
+    private fun handleAlarmDialogIntent() {
+        val showAlarmDialog = intent.getBooleanExtra("SHOW_ALARM_DIALOG", false)
+        if (showAlarmDialog) {
+            val alarmId = intent.getStringExtra("ALARM_ID") ?: ""
+            val alarmName = intent.getStringExtra("ALARM_NAME") ?: ""
+
+            if (alarmId.isNotEmpty() && alarmName.isNotEmpty()) {
+                val alarm = Alarm(
+                    id = alarmId,
+                    name = alarmName,
+                    latitude = 0.0,
+                    longitude = 0.0,
+                    radius = 0f,
+                    userId = "",
+                    active = true
+                )
+                homeViewModel.showAlarmDialog(alarm)
             }
         }
     }

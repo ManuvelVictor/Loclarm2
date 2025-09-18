@@ -43,10 +43,12 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val selectedLocation by viewModel.selectedLocation.collectAsState()
     val showBottomSheet by viewModel.showBottomSheet.collectAsState()
     val currentLocation by viewModel.currentLocation.collectAsState()
+    val showAlarmDialog by viewModel.showAlarmDialog.collectAsState()
+    val currentTriggeredAlarm by viewModel.currentTriggeredAlarm.collectAsState()
     val scope = rememberCoroutineScope()
+
     val locationPermissionState = rememberPermissionState(
         android.Manifest.permission.ACCESS_FINE_LOCATION
     )
@@ -170,11 +172,23 @@ fun HomeScreen(
                     onSave = { name, radius, isActive ->
                         scope.launch {
                             viewModel.saveAlarm(context, name, radius, isActive)
-                            viewModel.setShowBottomSheet(false, isCancelled = false)
+                            viewModel.setShowBottomSheet(false)
                         }
                     },
                     onDiscard = {
-                        viewModel.setShowBottomSheet(false, isCancelled = true)
+                        viewModel.setShowBottomSheet(false)
+                    }
+                )
+            }
+
+            if (showAlarmDialog && currentTriggeredAlarm != null) {
+                AlarmTriggeredDialog(
+                    alarmName = currentTriggeredAlarm!!.name,
+                    onStopAlarm = {
+                        viewModel.stopTriggeredAlarm(context)
+                    },
+                    onDismiss = {
+                        viewModel.hideAlarmDialog()
                     }
                 )
             }

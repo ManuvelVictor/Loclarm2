@@ -1,5 +1,6 @@
 package com.victor.loclarm2.presentation.home.screens
 
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,7 +17,10 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,6 +35,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,6 +57,7 @@ import com.victor.loclarm2.presentation.home.viewmodel.HomeViewModel
 import com.victor.loclarm2.utils.GlassBox
 import kotlinx.coroutines.launch
 
+@SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetAlarmBottomSheet(
@@ -59,71 +65,122 @@ fun SetAlarmBottomSheet(
     onSave: (String, Float, Boolean) -> Unit,
     onDiscard: () -> Unit
 ) {
+    val selectedLocation by viewModel.selectedLocation.collectAsState()
     var alarmName by remember { mutableStateOf("") }
-    var radius by remember { mutableFloatStateOf(1f) }
-    var isActive by remember { mutableStateOf(false) }
+    var selectedRadius by remember { mutableFloatStateOf(1000f) }
+    var isAlarmActive by remember { mutableStateOf(false) }
 
     ModalBottomSheet(
-        onDismissRequest = { onDiscard() }
+        onDismissRequest = onDiscard,
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text(
+                text = "Set Location Alarm",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            selectedLocation?.let { location ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp)
+                    ) {
+                        Text(
+                            text = "Selected Location:",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "${String.format("%.6f", location.latitude)}, ${String.format("%.6f", location.longitude)}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+
             OutlinedTextField(
                 value = alarmName,
                 onValueChange = { alarmName = it },
                 label = { Text("Alarm Name") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                singleLine = true
             )
-            Spacer(modifier = Modifier.height(16.dp))
 
-            Text("Radius (km): ${radius.toInt()}")
-            Slider(
-                value = radius,
-                onValueChange = {
-                    radius = it
-                    viewModel.setSelectedRadius(it * 1000f)
-                },
-                valueRange = 1f..50f,
-                steps = 49,
-                modifier = Modifier.fillMaxWidth()
+            Text(
+                text = "Radius: ${selectedRadius.toInt()}m",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
             )
-            Spacer(modifier = Modifier.height(16.dp))
+
+            Slider(
+                value = selectedRadius,
+                onValueChange = { selectedRadius = it },
+                valueRange = 100f..5000f,
+                steps = 49,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            )
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Activate")
-                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Activate Alarm",
+                    style = MaterialTheme.typography.bodyMedium
+                )
                 Switch(
-                    checked = isActive,
-                    onCheckedChange = {
-                        isActive = it
-                        viewModel.setSelectedAlarmActive(it)
-                    },
-                    modifier = Modifier.weight(1f)
+                    checked = isAlarmActive,
+                    onCheckedChange = { isAlarmActive = it }
                 )
             }
-            Spacer(modifier = Modifier.height(16.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Button(onClick = { onDiscard() }) {
-                    Text("Discard")
+                OutlinedButton(
+                    onClick = onDiscard,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Cancel")
                 }
-                Button(onClick = {
-                    if (alarmName.isNotBlank()) {
-                        onSave(alarmName, radius * 1000f, isActive)
-                    }
-                }) {
-                    Text("Save")
+
+                Button(
+                    onClick = {
+                        if (alarmName.isNotBlank()) {
+                            onSave(alarmName, selectedRadius, isAlarmActive)
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = alarmName.isNotBlank()
+                ) {
+                    Text("Save Alarm")
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
@@ -294,4 +351,35 @@ fun SearchAndLocationBar(
             }
         }
     }
+}
+
+@Composable
+fun AlarmTriggeredDialog(
+    alarmName: String,
+    onStopAlarm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("🚨 Location Alarm Triggered!")
+        },
+        text = {
+            Text("You have reached your destination: $alarmName\n\nWould you like to stop this alarm?")
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onStopAlarm
+            ) {
+                Text("Stop Alarm")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss
+            ) {
+                Text("Keep Alarm")
+            }
+        }
+    )
 }

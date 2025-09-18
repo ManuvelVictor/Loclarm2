@@ -22,7 +22,9 @@ import com.victor.loclarm2.domain.repository.AuthRepository
 import com.victor.loclarm2.domain.usecase.alarm.AlarmsUseCase
 import com.victor.loclarm2.presentation.home.screens.getFromLocationNameAsync
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -45,20 +47,19 @@ class HomeViewModel @Inject constructor(
     private val _searchResults = MutableStateFlow<List<String>>(emptyList())
     val searchResults: StateFlow<List<String>> = _searchResults
 
-    private val _selectedRadius = MutableStateFlow(1000f)
-    val selectedRadius: StateFlow<Float> = _selectedRadius
-
-    private val _selectedAlarmActive = MutableStateFlow(false)
-    val selectedAlarmActive: StateFlow<Boolean> = _selectedAlarmActive
-
     private val _showBottomSheet = MutableStateFlow(false)
     val showBottomSheet: StateFlow<Boolean> = _showBottomSheet
-
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     private val _activeAlarms = MutableStateFlow<List<Alarm>>(emptyList())
     val activeAlarms: StateFlow<List<Alarm>> = _activeAlarms
 
+    private val _showAlarmDialog = MutableStateFlow(false)
+    val showAlarmDialog: StateFlow<Boolean> = _showAlarmDialog
+
+    private val _currentTriggeredAlarm = MutableStateFlow<Alarm?>(null)
+    val currentTriggeredAlarm: StateFlow<Alarm?> = _currentTriggeredAlarm
+
+    private var fusedLocationClient: FusedLocationProviderClient? = null
 
     fun initializeLocation(context: Context) {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
@@ -72,14 +73,13 @@ class HomeViewModel @Inject constructor(
                 android.content.pm.PackageManager.PERMISSION_GRANTED
             ) {
                 try {
-                    val locationResult = fusedLocationClient.lastLocation.await()
+                    val locationResult = fusedLocationClient?.lastLocation?.await()
                     locationResult?.let {
                         val latLng = LatLng(it.latitude, it.longitude)
                         _currentLocation.value = latLng
                         cameraPositionState?.position = CameraPosition.fromLatLngZoom(latLng, 10f)
                     }
-                } catch (_: Exception) {
-                }
+                } catch (_: Exception) { }
             }
         }
     }
@@ -90,19 +90,70 @@ class HomeViewModel @Inject constructor(
             alarmUseCase.getAlarms(user.id).onSuccess { alarms ->
                 val activeAlarms = alarms.filter { it.active }
                 _activeAlarms.value = activeAlarms
+
                 val pendingIntent = geofenceHelper.getPendingIntent()
                 activeAlarms.forEach { alarm ->
                     val latLng = LatLng(alarm.latitude, alarm.longitude)
                     geofenceHelper.addGeofence(latLng, alarm.radius, alarm.id, pendingIntent)
-                }
-
-                if (activeAlarms.isNotEmpty()) {
-                    ContextCompat.startForegroundService(
-                        context,
-                        Intent(context, LocationTrackingService::class.java)
-                    )
+                    startLocationTrackingForAlarm(context, alarm)
                 }
             }
+        }
+    }
+
+    fun startLocationTrackingForAlarm(context: Context, alarm: Alarm) {
+        val intent = Intent(context, LocationTrackingService::class.java).apply {
+            action = LocationTrackingService.ACTION_START_TRACKING
+            putExtra("TARGET_LATITUDE", alarm.latitude)
+            putExtra("TARGET_LONGITUDE", alarm.longitude)
+            putExtra("TARGET_RADIUS", alarm.radius)
+            putExtra("ALARM_NAME", alarm.name)
+            putExtra("ALARM_ID", alarm.id)
+        }
+        context.startForegroundService(intent)
+    }
+
+    fun stopLocationTrackingForAlarm(context: Context, alarmId: String) {
+        viewModelScope.launch {
+            alarmUseCase.getAlarms(authRepository.getCurrentUser()?.id ?: "")
+                .onSuccess { alarms ->
+                    val alarm = alarms.find { it.id == alarmId }
+                    alarm?.let {
+                        val updatedAlarm = it.copy(active = false)
+                        alarmUseCase.saveAlarm(updatedAlarm)
+
+                        val updatedActiveAlarms = _activeAlarms.value.filter { activeAlarm ->
+                            activeAlarm.id != alarmId
+                        }
+                        _activeAlarms.value = updatedActiveAlarms
+                    }
+                }
+
+            val intent = Intent(context, LocationTrackingService::class.java).apply {
+                action = LocationTrackingService.ACTION_STOP_TRACKING
+            }
+            context.stopService(intent)
+        }
+    }
+
+    fun showAlarmDialog(alarm: Alarm) {
+        _currentTriggeredAlarm.value = alarm
+        _showAlarmDialog.value = true
+    }
+
+    fun hideAlarmDialog() {
+        _showAlarmDialog.value = false
+        _currentTriggeredAlarm.value = null
+    }
+
+    fun stopTriggeredAlarm(context: Context) {
+        _currentTriggeredAlarm.value?.let { alarm ->
+            stopLocationTrackingForAlarm(context, alarm.id)
+
+            val intent = Intent(context, LocationTrackingService::class.java)
+            context.stopService(intent)
+
+            hideAlarmDialog()
         }
     }
 
@@ -115,9 +166,8 @@ class HomeViewModel @Inject constructor(
                     .build()
                 try {
                     val response = placesClient.findAutocompletePredictions(request).await()
-                    val predictions =
+                    _searchResults.value =
                         response.autocompletePredictions.map { it.getFullText(null).toString() }
-                    _searchResults.value = predictions
                 } catch (_: Exception) {
                     _searchResults.value = emptyList()
                 }
@@ -133,9 +183,7 @@ class HomeViewModel @Inject constructor(
             val addresses = geocoder.getFromLocationNameAsync(placeName, 1)
             if (addresses.isNotEmpty()) {
                 LatLng(addresses[0].latitude, addresses[0].longitude)
-            } else {
-                LatLng(0.0, 0.0)
-            }
+            } else LatLng(0.0, 0.0)
         } catch (_: Exception) {
             LatLng(0.0, 0.0)
         }
@@ -143,22 +191,10 @@ class HomeViewModel @Inject constructor(
 
     fun setSelectedLocation(latitude: Double, longitude: Double) {
         _selectedLocation.value = Location(latitude, longitude)
-        _selectedAlarmActive.value = false
     }
 
-    fun setShowBottomSheet(show: Boolean, isCancelled: Boolean = false) {
+    fun setShowBottomSheet(show: Boolean) {
         _showBottomSheet.value = show
-        if (!show && isCancelled) {
-            _selectedAlarmActive.value = false
-        }
-    }
-
-    fun setSelectedRadius(radius: Float) {
-        _selectedRadius.value = radius
-    }
-
-    fun setSelectedAlarmActive(active: Boolean) {
-        _selectedAlarmActive.value = active
     }
 
     fun saveAlarm(context: Context, name: String, radius: Float, isActive: Boolean) {
@@ -178,16 +214,15 @@ class HomeViewModel @Inject constructor(
             alarmUseCase.saveAlarm(alarm)
 
             if (isActive) {
-                val serviceIntent = Intent(context, LocationTrackingService::class.java).apply {
-                    putExtra("destinationLat", location.latitude)
-                    putExtra("destinationLng", location.longitude)
-                    putExtra("radius", radius.toInt())
-                }
-                ContextCompat.startForegroundService(context, serviceIntent)
-
                 val latLng = LatLng(location.latitude, location.longitude)
                 val pendingIntent = geofenceHelper.getPendingIntent()
                 geofenceHelper.addGeofence(latLng, radius, alarm.id, pendingIntent)
+
+                startLocationTrackingForAlarm(context, alarm)
+
+                val updatedAlarms = _activeAlarms.value.toMutableList()
+                updatedAlarms.add(alarm)
+                _activeAlarms.value = updatedAlarms
             }
         }
     }
