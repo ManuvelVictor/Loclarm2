@@ -5,6 +5,7 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -51,10 +52,22 @@ import com.victor.loclarm2.data.model.Alarm
 fun GlassBox(
     modifier: Modifier = Modifier,
     cornerRadius: Dp = 24.dp,
-    backgroundColor: Color = Color.Black.copy(alpha = 0.55f),
-    borderColor: Color = Color.Black.copy(alpha = 0.45f),
     content: @Composable BoxScope.() -> Unit
 ) {
+    val isDarkTheme = isSystemInDarkTheme()
+
+    val backgroundColor = if (isDarkTheme) {
+        Color.Black.copy(alpha = 0.55f)
+    } else {
+        Color.White.copy(alpha = 0.85f)
+    }
+
+    val borderColor = if (isDarkTheme) {
+        Color.White.copy(alpha = 0.2f)
+    } else {
+        Color.Gray.copy(alpha = 0.3f)
+    }
+
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(cornerRadius))
@@ -72,17 +85,23 @@ fun GlassTextField(
     isPassword: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val isDarkTheme = isSystemInDarkTheme()
     var passwordVisible by remember { mutableStateOf(false) }
 
+    val blurBackgroundColor = if (isDarkTheme) {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.2f)
+    } else {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
+    }
+
     Box(
-        modifier = modifier
-            .clip(MaterialTheme.shapes.medium)
+        modifier = modifier.clip(MaterialTheme.shapes.medium)
     ) {
         Box(
             modifier = Modifier
                 .matchParentSize()
                 .blur(20.dp)
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.2f))
+                .background(blurBackgroundColor)
         )
 
         OutlinedTextField(
@@ -137,6 +156,20 @@ fun GlassAlarmItem(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val isDarkTheme = isSystemInDarkTheme()
+
+    val gradientColors = if (isDarkTheme) {
+        listOf(
+            Color.White.copy(alpha = 0.15f),
+            Color.White.copy(alpha = 0.05f)
+        )
+    } else {
+        listOf(
+            Color.White.copy(alpha = 0.9f),
+            Color.White.copy(alpha = 0.7f)
+        )
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -147,12 +180,7 @@ fun GlassAlarmItem(
                 clip = true
             }
             .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.15f),
-                        Color.White.copy(alpha = 0.05f)
-                    )
-                ),
+                Brush.verticalGradient(gradientColors),
                 shape = RoundedCornerShape(20.dp)
             ),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
@@ -160,24 +188,43 @@ fun GlassAlarmItem(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(text = alarm.name, style = MaterialTheme.typography.titleMedium)
-            Text(text = "Radius: ${alarm.radius.toInt()} meters")
+            Text(
+                text = alarm.name,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Radius: ${alarm.radius.toInt()} meters",
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(onClick = onEdit) {
+            Row(
+                horizontalArrangement = Arrangement.End,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedButton(
+                    onClick = onEdit,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
                     Text("Edit")
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                OutlinedButton(onClick = onDelete, colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color.White
-                )) {
+                OutlinedButton(
+                    onClick = onDelete,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = if (isDarkTheme)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.error
+                    )
+                ) {
                     Text("Delete")
                 }
             }
         }
     }
 }
-
-

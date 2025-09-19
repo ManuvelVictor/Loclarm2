@@ -2,6 +2,7 @@ package com.victor.loclarm2.presentation.home.screens
 
 import android.app.Activity
 import android.os.Build
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,6 +33,8 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.victor.loclarm2.R
 import com.victor.loclarm2.presentation.home.viewmodel.HomeViewModel
+import com.victor.loclarm2.ui.theme.CyberpunkPink
+import com.victor.loclarm2.ui.theme.CyberpunkPinkDark
 import com.victor.loclarm2.utils.NetworkAwareContent
 import com.victor.loclarm2.utils.requestForegroundServiceLocationPermission
 import kotlinx.coroutines.launch
@@ -43,6 +46,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
+    val isDarkTheme = isSystemInDarkTheme()
     val showBottomSheet by viewModel.showBottomSheet.collectAsState()
     val currentLocation by viewModel.currentLocation.collectAsState()
     val showAlarmDialog by viewModel.showAlarmDialog.collectAsState()
@@ -128,11 +132,20 @@ fun HomeScreen(
         }
     }
 
-    val mapProperties = remember {
+    val mapProperties = remember(isDarkTheme) {
         MapProperties(
-            mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.map_dark_style)
+            mapStyleOptions = if (isDarkTheme) {
+                MapStyleOptions.loadRawResourceStyle(context, R.raw.map_dark_style)
+            } else {
+                MapStyleOptions.loadRawResourceStyle(context, R.raw.map_light_style)
+            }
         )
     }
+
+    val circleStrokeColor = if (isDarkTheme) CyberpunkPink else CyberpunkPinkDark
+    val circleFillColor = circleStrokeColor.copy(alpha = 0.2f)
+
+
 
     NetworkAwareContent {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -159,7 +172,7 @@ fun HomeScreen(
                         center = center,
                         radius = alarm.radius.toDouble(),
                         strokeColor = Color.Red,
-                        fillColor = Color.Red.copy(alpha = 0.2f),
+                        fillColor = circleFillColor,
                         strokeWidth = 2f
                     )
                 }

@@ -2,6 +2,7 @@ package com.victor.loclarm2.presentation.home.screens
 
 import android.annotation.SuppressLint
 import android.content.Context
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -187,11 +188,23 @@ fun SetAlarmBottomSheet(
 
 @Composable
 fun BottomNavigationBar(navController: NavController) {
+    val isDarkTheme = isSystemInDarkTheme()
     val selectedColor = MaterialTheme.colorScheme.primary
-    val unselectedColor = Color.White
+
+    val unselectedColor = if (isDarkTheme) {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+    } else {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+    }
+
+    val indicatorColor = if (isDarkTheme) {
+        selectedColor.copy(alpha = 0.2f)
+    } else {
+        selectedColor.copy(alpha = 0.15f)
+    }
+
     GlassBox(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = Modifier.fillMaxWidth()
     ) {
         NavigationBar(
             containerColor = Color.Transparent,
@@ -201,12 +214,17 @@ fun BottomNavigationBar(navController: NavController) {
             NavigationBarItem(
                 selected = navController.currentDestination?.route == "home",
                 onClick = { navController.navigate("home") },
-                icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                icon = {
+                    Icon(
+                        Icons.Default.Home,
+                        contentDescription = "Home"
+                    )
+                },
                 label = { Text("Home") },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = selectedColor,
                     selectedTextColor = selectedColor,
-                    indicatorColor = selectedColor.copy(alpha = 0.12f),
+                    indicatorColor = indicatorColor,
                     unselectedIconColor = unselectedColor,
                     unselectedTextColor = unselectedColor
                 )
@@ -214,12 +232,17 @@ fun BottomNavigationBar(navController: NavController) {
             NavigationBarItem(
                 selected = navController.currentDestination?.route == "alarms",
                 onClick = { navController.navigate("alarms") },
-                icon = { Icon(Icons.Default.Notifications, contentDescription = "Alarms") },
+                icon = {
+                    Icon(
+                        Icons.Default.Notifications,
+                        contentDescription = "Alarms"
+                    )
+                },
                 label = { Text("Alarms") },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = selectedColor,
                     selectedTextColor = selectedColor,
-                    indicatorColor = selectedColor.copy(alpha = 0.12f),
+                    indicatorColor = indicatorColor,
                     unselectedIconColor = unselectedColor,
                     unselectedTextColor = unselectedColor
                 )
@@ -227,12 +250,17 @@ fun BottomNavigationBar(navController: NavController) {
             NavigationBarItem(
                 selected = navController.currentDestination?.route == "settings",
                 onClick = { navController.navigate("settings") },
-                icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                icon = {
+                    Icon(
+                        Icons.Default.Settings,
+                        contentDescription = "Settings"
+                    )
+                },
                 label = { Text("Settings") },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = selectedColor,
                     selectedTextColor = selectedColor,
-                    indicatorColor = selectedColor.copy(alpha = 0.12f),
+                    indicatorColor = indicatorColor,
                     unselectedIconColor = unselectedColor,
                     unselectedTextColor = unselectedColor
                 )
