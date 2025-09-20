@@ -5,11 +5,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.google.android.gms.location.GeofencingClient
 import com.google.android.gms.location.LocationServices
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.victor.loclarm2.geofence.AlarmService
 
 class DismissAlarmReceiver : BroadcastReceiver() {
 
@@ -56,7 +54,5 @@ class DismissAlarmReceiver : BroadcastReceiver() {
         notificationManager.cancelAll()
 
         context.stopService(Intent(context, LocationTrackingService::class.java))
-
-        context.stopService(Intent(context, AlarmService::class.java))
     }
 }
