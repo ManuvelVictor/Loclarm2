@@ -16,7 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -33,8 +33,8 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.victor.loclarm2.R
 import com.victor.loclarm2.presentation.home.viewmodel.HomeViewModel
-import com.victor.loclarm2.ui.theme.CyberpunkPink
-import com.victor.loclarm2.ui.theme.CyberpunkPinkDark
+import com.victor.loclarm2.presentation.ui.theme.CyberpunkPink
+import com.victor.loclarm2.presentation.ui.theme.CyberpunkPinkDark
 import com.victor.loclarm2.utils.NetworkAwareContent
 import com.victor.loclarm2.utils.requestForegroundServiceLocationPermission
 import kotlinx.coroutines.launch
@@ -210,7 +210,7 @@ fun HomeScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
             ) {
-                BottomNavigationBar(navController)
+                BottomNavigationBar(navController, viewModel)
             }
         }
     }

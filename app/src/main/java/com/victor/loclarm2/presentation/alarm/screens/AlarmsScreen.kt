@@ -7,8 +7,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.victor.loclarm2.R
 import com.victor.loclarm2.data.model.Alarm
@@ -16,24 +17,27 @@ import com.victor.loclarm2.presentation.alarm.viewmodel.AlarmsViewModel
 import com.victor.loclarm2.presentation.home.screens.BottomNavigationBar
 import com.victor.loclarm2.utils.GlassAlarmItem
 import com.airbnb.lottie.compose.*
+import com.victor.loclarm2.presentation.home.viewmodel.HomeViewModel
 import com.victor.loclarm2.utils.NetworkAwareContent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlarmsScreen(
     navController: NavController,
-    viewModel: AlarmsViewModel = hiltViewModel()
+    viewModel: AlarmsViewModel = hiltViewModel(),
+    homeViewModel: HomeViewModel = hiltViewModel()
 ) {
     val alarms by viewModel.alarms.collectAsState()
     var showBottomSheet by remember { mutableStateOf(false) }
     var selectedAlarm by remember { mutableStateOf<Alarm?>(null) }
     var showDeleteConfirmSheet by remember { mutableStateOf(false) }
     var alarmToDelete by remember { mutableStateOf<Alarm?>(null) }
+    val context = LocalContext.current
 
     NetworkAwareContent {
         Scaffold(
             topBar = { TopAppBar(title = { Text("Alarms") }) },
-            bottomBar = { BottomNavigationBar(navController) }
+            bottomBar = { BottomNavigationBar(navController, homeViewModel) }
         ) { innerPadding ->
 
             Box(
@@ -93,7 +97,7 @@ fun AlarmsScreen(
                             selectedAlarm = null
                         },
                         onSave = { updatedAlarm ->
-                            viewModel.updateAlarm(updatedAlarm)
+                            viewModel.updateAlarm(context, updatedAlarm)
                             showBottomSheet = false
                             selectedAlarm = null
                         }

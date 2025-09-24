@@ -2,10 +2,13 @@ package com.victor.loclarm2.presentation
 
 import android.os.Build
 import android.os.Bundle
+import android.view.View
+import android.view.WindowInsetsController
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,7 +28,7 @@ import com.victor.loclarm2.presentation.auth.screens.RegisterScreen
 import com.victor.loclarm2.presentation.home.screens.HomeScreen
 import com.victor.loclarm2.presentation.home.viewmodel.HomeViewModel
 import com.victor.loclarm2.presentation.settings.screens.SettingsScreen
-import com.victor.loclarm2.ui.theme.Loclarm2Theme
+import com.victor.loclarm2.presentation.ui.theme.Loclarm2Theme
 import dagger.hilt.android.AndroidEntryPoint
 import jakarta.inject.Inject
 
@@ -43,6 +46,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             Loclarm2Theme {
+                EdgeToEdgeSystemBars()
                 Surface(modifier = Modifier.fillMaxSize()) {
                     var isLoading by remember { mutableStateOf(true) }
                     var startDestination by remember { mutableStateOf("login") }
@@ -120,6 +124,35 @@ class MainActivity : ComponentActivity() {
                 )
                 homeViewModel.showAlarmDialog(alarm)
             }
+        }
+    }
+}
+
+@Composable
+fun EdgeToEdgeSystemBars() {
+    val isDarkTheme = isSystemInDarkTheme()
+    val view = androidx.compose.ui.platform.LocalView.current
+
+    SideEffect {
+        val window = (view.context as ComponentActivity).window
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val controller = window.insetsController
+            controller?.setSystemBarsAppearance(
+                if (!isDarkTheme) WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+                        WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                else 0,
+                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+                        WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+            )
+        } else {
+            val flags = if (!isDarkTheme) {
+                View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
+                        View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            } else 0
+            view.systemUiVisibility = flags
         }
     }
 }

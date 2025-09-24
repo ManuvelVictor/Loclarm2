@@ -55,6 +55,26 @@ class GeofenceHelper @Inject constructor(
             }
     }
 
+    fun removeGeofenceById(id: String) {
+        geofencingClient.removeGeofences(listOf(id))
+            .addOnSuccessListener {
+                Log.d("GeofenceHelper", "Geofence removed successfully: $id")
+            }
+            .addOnFailureListener { e ->
+                Log.e("GeofenceHelper", "Failed to remove geofence: ${e.message}")
+            }
+    }
+
+    fun removeAllGeofences() {
+        geofencingClient.removeGeofences(getPendingIntent())
+            .addOnSuccessListener {
+                Log.d("GeofenceHelper", "All geofences removed successfully")
+            }
+            .addOnFailureListener { e ->
+                Log.e("GeofenceHelper", "Failed to remove all geofences: ${e.message}")
+            }
+    }
+
     fun getPendingIntent(): PendingIntent {
         val intent = Intent(context, GeofenceBroadcastReceiver::class.java)
         return PendingIntent.getBroadcast(

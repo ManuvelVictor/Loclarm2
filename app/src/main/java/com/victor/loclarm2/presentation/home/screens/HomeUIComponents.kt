@@ -52,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.maps.android.compose.CameraPositionState
 import com.victor.loclarm2.presentation.home.viewmodel.HomeViewModel
@@ -187,7 +188,7 @@ fun SetAlarmBottomSheet(
 }
 
 @Composable
-fun BottomNavigationBar(navController: NavController) {
+fun BottomNavigationBar(navController: NavController, viewModel: HomeViewModel) {
     val isDarkTheme = isSystemInDarkTheme()
     val selectedColor = MaterialTheme.colorScheme.primary
 
@@ -203,6 +204,9 @@ fun BottomNavigationBar(navController: NavController) {
         selectedColor.copy(alpha = 0.15f)
     }
 
+    val navBackStackEntry = navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry.value?.destination
+
     GlassBox(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -212,14 +216,17 @@ fun BottomNavigationBar(navController: NavController) {
             modifier = Modifier.fillMaxWidth()
         ) {
             NavigationBarItem(
-                selected = navController.currentDestination?.route == "home",
-                onClick = { navController.navigate("home") },
-                icon = {
-                    Icon(
-                        Icons.Default.Home,
-                        contentDescription = "Home"
-                    )
+                selected = currentDestination?.route == "home",
+                onClick = {
+                    navController.navigate("home") {
+                        launchSingleTop = true
+                        restoreState = true
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                    }
                 },
+                icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
                 label = { Text("Home") },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = selectedColor,
@@ -229,15 +236,20 @@ fun BottomNavigationBar(navController: NavController) {
                     unselectedTextColor = unselectedColor
                 )
             )
+
             NavigationBarItem(
-                selected = navController.currentDestination?.route == "alarms",
-                onClick = { navController.navigate("alarms") },
-                icon = {
-                    Icon(
-                        Icons.Default.Notifications,
-                        contentDescription = "Alarms"
-                    )
+                selected = currentDestination?.route == "alarms",
+                onClick = {
+                    viewModel.clearSearchResults()
+                    navController.navigate("alarms") {
+                        launchSingleTop = true
+                        restoreState = true
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                    }
                 },
+                icon = { Icon(Icons.Default.Notifications, contentDescription = "Alarms") },
                 label = { Text("Alarms") },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = selectedColor,
@@ -247,15 +259,20 @@ fun BottomNavigationBar(navController: NavController) {
                     unselectedTextColor = unselectedColor
                 )
             )
+
             NavigationBarItem(
-                selected = navController.currentDestination?.route == "settings",
-                onClick = { navController.navigate("settings") },
-                icon = {
-                    Icon(
-                        Icons.Default.Settings,
-                        contentDescription = "Settings"
-                    )
+                selected = currentDestination?.route == "settings",
+                onClick = {
+                    viewModel.clearSearchResults()
+                    navController.navigate("settings") {
+                        launchSingleTop = true
+                        restoreState = true
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                    }
                 },
+                icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                 label = { Text("Settings") },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = selectedColor,
@@ -286,7 +303,7 @@ fun SearchAndLocationBar(
 
     Column(
         modifier = Modifier
-            .padding(horizontal = 20.dp, vertical = 60.dp)
+            .padding(horizontal = 20.dp, vertical = 40.dp)
             .fillMaxWidth()
     ) {
         GlassBox(
@@ -298,7 +315,7 @@ fun SearchAndLocationBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .padding(horizontal = 10.dp, vertical = 1.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
