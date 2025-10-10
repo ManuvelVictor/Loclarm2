@@ -16,12 +16,10 @@ import android.os.Vibrator
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.*
 import com.victor.loclarm2.R
+import com.victor.loclarm2.data.local.SettingsDataStore
 import com.victor.loclarm2.presentation.MainActivity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 
 class LocationTrackingService : Service() {
 
@@ -38,18 +36,20 @@ class LocationTrackingService : Service() {
 
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
+    private lateinit var dataStore: SettingsDataStore
+
     private val serviceJob = Job()
-    private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
+    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
     private lateinit var locationCallback: LocationCallback
 
-    private var targetLatitude: Double = 0.0
-    private var targetLongitude: Double = 0.0
-    private var targetRadius: Float = 0f
-    private var alarmName: String = ""
-    private var alarmId: String = ""
+    private var targetLatitude = 0.0
+    private var targetLongitude = 0.0
+    private var targetRadius = 0f
+    private var alarmName = ""
+    private var alarmId = ""
     private var isTracking = false
     private var isAlarmTriggered = false
 
@@ -58,6 +58,7 @@ class LocationTrackingService : Service() {
         createNotificationChannels()
         vibrator = getSystemService(Vibrator::class.java)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        dataStore = SettingsDataStore(applicationContext)
 
         locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L)
             .setMinUpdateIntervalMillis(2000L)
@@ -67,10 +68,7 @@ class LocationTrackingService : Service() {
             override fun onLocationResult(locationResult: LocationResult) {
                 super.onLocationResult(locationResult)
                 if (!isTracking || isAlarmTriggered) return
-
-                locationResult.lastLocation?.let { location ->
-                    checkDistanceToTarget(location)
-                }
+                locationResult.lastLocation?.let { checkDistanceToTarget(it) }
             }
         }
     }
@@ -85,20 +83,13 @@ class LocationTrackingService : Service() {
                 alarmId = intent.getStringExtra("ALARM_ID") ?: ""
                 startLocationTracking()
             }
-            ACTION_STOP_TRACKING -> {
-                stopLocationTracking()
-            }
-            ACTION_TRIGGER_ALARM -> {
-                triggerAlarm()
-            }
+            ACTION_STOP_TRACKING -> stopLocationTracking()
+            ACTION_TRIGGER_ALARM -> triggerAlarm()
             else -> {
                 val legacyAlarmId = intent?.getStringExtra("ALARM_ID") ?: ""
-                if (legacyAlarmId.isNotEmpty()) {
-                    triggerAlarm()
-                }
+                if (legacyAlarmId.isNotEmpty()) triggerAlarm()
             }
         }
-
         return START_NOT_STICKY
     }
 
@@ -116,8 +107,6 @@ class LocationTrackingService : Service() {
                 locationCallback,
                 Looper.getMainLooper()
             )
-
-
         } catch (_: SecurityException) {
             stopLocationTracking()
         }
@@ -132,10 +121,7 @@ class LocationTrackingService : Service() {
         val notificationManager = getSystemService(NotificationManager::class.java)
         notificationManager.cancel(TRACKING_NOTIFICATION_ID)
 
-
-        if (!isAlarmTriggered) {
-            stopSelf()
-        }
+        if (!isAlarmTriggered) stopSelf()
     }
 
     private fun checkDistanceToTarget(currentLocation: Location) {
@@ -145,27 +131,83 @@ class LocationTrackingService : Service() {
         }
 
         val distance = currentLocation.distanceTo(targetLocation)
-
-
-        if (distance <= targetRadius) {
-            triggerAlarm()
-        }
+        if (distance <= targetRadius) triggerAlarm()
     }
 
     private fun triggerAlarm() {
         if (isAlarmTriggered) return
-
         isAlarmTriggered = true
-        stopLocationTracking()
 
+        stopLocationTracking()
         startForeground(ALARM_NOTIFICATION_ID, createAlarmNotification())
-        startAlarmSound()
-        startVibration()
 
         serviceScope.launch {
-            delay(60000)
-            stopAlarm()
+            val volume = dataStore.volume.first()
+            val ringtoneKey = dataStore.ringtone.first()
+            val vibrationEnabled = dataStore.vibration.first()
+
+            val resId = when (ringtoneKey) {
+                "default_1" -> R.raw.default_alarm_1
+                "default_2" -> R.raw.default_alarm_2
+                "default_3" -> R.raw.default_alarm_3
+                "default_4" -> R.raw.default_alarm_4
+                else -> R.raw.default_alarm_1
+            }
+
+            withContext(Dispatchers.Main) {
+                playSound(resId, volume)
+                if (vibrationEnabled) startVibration()
+            }
         }
+    }
+
+    private fun playSound(resId: Int, volume: Float) {
+        try {
+            mediaPlayer?.release()
+            mediaPlayer = MediaPlayer.create(this, resId).apply {
+                setVolume(volume, volume)
+                isLooping = true
+                start()
+            }
+        } catch (_: Exception) {
+            // fallback to default system sound
+            try {
+                mediaPlayer = MediaPlayer().apply {
+                    setDataSource(
+                        this@LocationTrackingService,
+                        RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                    )
+                    isLooping = true
+                    prepare()
+                    start()
+                }
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private fun startVibration() {
+        try {
+            val pattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
+            vibrator?.vibrate(VibrationEffect.createWaveform(pattern, 0))
+        } catch (_: Exception) {
+        }
+    }
+
+    fun stopAlarm() {
+        mediaPlayer?.apply {
+            if (isPlaying) stop()
+            release()
+        }
+        mediaPlayer = null
+
+        vibrator?.cancel()
+
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        notificationManager.cancel(ALARM_NOTIFICATION_ID)
+
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     private fun createTrackingNotification(): Notification {
@@ -221,70 +263,6 @@ class LocationTrackingService : Service() {
             .addAction(R.drawable.close_icon, "Dismiss", dismissPendingIntent)
             .setFullScreenIntent(mainPendingIntent, true)
             .build()
-    }
-
-    private fun startAlarmSound() {
-        try {
-            mediaPlayer?.release()
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
-                    android.media.AudioAttributes.Builder()
-                        .setUsage(android.media.AudioAttributes.USAGE_ALARM)
-                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                )
-                setDataSource(
-                    this@LocationTrackingService,
-                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                )
-                isLooping = true
-                prepare()
-                start()
-            }
-        } catch (_: Exception) {
-            try {
-                mediaPlayer = MediaPlayer().apply {
-                    setAudioAttributes(
-                        android.media.AudioAttributes.Builder()
-                            .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
-                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                            .build()
-                    )
-                    setDataSource(
-                        this@LocationTrackingService,
-                        RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                    )
-                    isLooping = true
-                    prepare()
-                    start()
-                }
-            } catch (_: Exception) {
-            }
-        }
-    }
-
-    private fun startVibration() {
-        try {
-            val pattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
-            vibrator?.vibrate(VibrationEffect.createWaveform(pattern, 0))
-        } catch (_: Exception) {
-        }
-    }
-
-    fun stopAlarm() {
-        mediaPlayer?.apply {
-            if (isPlaying) stop()
-            release()
-        }
-        mediaPlayer = null
-
-        vibrator?.cancel()
-
-        val notificationManager = getSystemService(NotificationManager::class.java)
-        notificationManager.cancel(ALARM_NOTIFICATION_ID)
-
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
     }
 
     private fun createNotificationChannels() {

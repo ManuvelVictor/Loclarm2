@@ -1,22 +1,36 @@
 package com.victor.loclarm2.presentation.alarm.screens
 
-import androidx.compose.foundation.layout.*
+import android.content.Context
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.victor.loclarm2.R
 import com.victor.loclarm2.data.model.Alarm
 import com.victor.loclarm2.presentation.alarm.viewmodel.AlarmsViewModel
 import com.victor.loclarm2.presentation.home.screens.BottomNavigationBar
-import com.victor.loclarm2.utils.GlassAlarmItem
-import com.airbnb.lottie.compose.*
 import com.victor.loclarm2.presentation.home.viewmodel.HomeViewModel
 import com.victor.loclarm2.utils.NetworkAwareContent
 
@@ -30,61 +44,64 @@ fun AlarmsScreen(
     val alarms by viewModel.alarms.collectAsState()
     var showBottomSheet by remember { mutableStateOf(false) }
     var selectedAlarm by remember { mutableStateOf<Alarm?>(null) }
-    var showDeleteConfirmSheet by remember { mutableStateOf(false) }
-    var alarmToDelete by remember { mutableStateOf<Alarm?>(null) }
-    val context = LocalContext.current
+    val localContext: Context = LocalContext.current
 
     NetworkAwareContent {
         Scaffold(
-            topBar = { TopAppBar(title = { Text("Alarms") }) },
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                "Alarms",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (alarms.isNotEmpty()) {
+                                Text(
+                                    "${alarms.size} active ${if (alarms.size == 1) "alarm" else "alarms"}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                )
+            },
             bottomBar = { BottomNavigationBar(navController, homeViewModel) }
         ) { innerPadding ->
-
             Box(
                 modifier = Modifier
                     .padding(innerPadding)
                     .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
             ) {
-
                 if (alarms.isEmpty()) {
-                    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.no_data_lottie))
-                    val progress by animateLottieCompositionAsState(
-                        composition = composition,
-                        iterations = LottieConstants.IterateForever
-                    )
-
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        LottieAnimation(
-                            composition = composition,
-                            progress = { progress },
-                            modifier = Modifier.size(250.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("No alarms set yet", style = MaterialTheme.typography.bodyLarge)
-                    }
+                    EmptyStateView()
                 } else {
                     LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(alarms) { alarm ->
-                            GlassAlarmItem(
+                        items(
+                            items = alarms,
+                            key = { it.id }
+                        ) { alarm ->
+                            SwipeToDeleteAlarmCard(
                                 alarm = alarm,
                                 onEdit = {
                                     selectedAlarm = alarm
                                     showBottomSheet = true
                                 },
                                 onDelete = {
-                                    alarmToDelete = alarm
-                                    showDeleteConfirmSheet = true
-                                }
+                                    viewModel.deleteAlarm(alarm.id)
+                                },
+                                modifier = Modifier.animateItem()
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
                         }
                     }
                 }
@@ -97,24 +114,9 @@ fun AlarmsScreen(
                             selectedAlarm = null
                         },
                         onSave = { updatedAlarm ->
-                            viewModel.updateAlarm(context, updatedAlarm)
+                            viewModel.updateAlarm(localContext, updatedAlarm)
                             showBottomSheet = false
                             selectedAlarm = null
-                        }
-                    )
-                }
-
-                if (showDeleteConfirmSheet && alarmToDelete != null) {
-                    ConfirmDeleteBottomSheet(
-                        alarm = alarmToDelete!!,
-                        onConfirm = {
-                            viewModel.deleteAlarm(alarmToDelete!!.id)
-                            showDeleteConfirmSheet = false
-                            alarmToDelete = null
-                        },
-                        onDismiss = {
-                            showDeleteConfirmSheet = false
-                            alarmToDelete = null
                         }
                     )
                 }
