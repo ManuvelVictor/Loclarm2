@@ -5,9 +5,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
@@ -133,13 +135,12 @@ fun ModernBottomSheet(
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
         ) {
-            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.Center
             ) {
                 Icon(
                     imageVector = icon,
@@ -147,6 +148,7 @@ fun ModernBottomSheet(
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(28.dp)
                 )
+                Spacer(Modifier.width(6.dp))
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleLarge,

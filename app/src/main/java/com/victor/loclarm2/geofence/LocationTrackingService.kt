@@ -146,13 +146,15 @@ class LocationTrackingService : Service() {
             val ringtoneKey = dataStore.ringtone.first()
             val vibrationEnabled = dataStore.vibration.first()
 
-            val resId = when (ringtoneKey) {
-                "default_1" -> R.raw.default_alarm_1
-                "default_2" -> R.raw.default_alarm_2
-                "default_3" -> R.raw.default_alarm_3
-                "default_4" -> R.raw.default_alarm_4
-                else -> R.raw.default_alarm_1
-            }
+            val availableRingtones = setOf(
+                R.raw.beep_alarm,
+                R.raw.incoming_alarm,
+                R.raw.pleasent_alarm
+            )
+
+            val resId = ringtoneKey.toIntOrNull()?.let { id ->
+                if (availableRingtones.contains(id)) id else R.raw.beep_alarm
+            } ?: R.raw.beep_alarm
 
             withContext(Dispatchers.Main) {
                 playSound(resId, volume)

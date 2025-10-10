@@ -76,6 +76,8 @@ fun HomeScreen(
         position = CameraPosition.fromLatLngZoom(LatLng(13.0827, 80.2707), 10f)
     }
 
+    val isLocationPermissionGranted = locationPermissionState.status.isGranted
+
     LaunchedEffect(
         locationPermissionState.status,
         backgroundLocationPermissionState?.status,
@@ -132,8 +134,9 @@ fun HomeScreen(
         }
     }
 
-    val mapProperties = remember(isDarkTheme) {
+    val mapProperties = remember(isDarkTheme, isLocationPermissionGranted) {
         MapProperties(
+            isMyLocationEnabled = isLocationPermissionGranted,
             mapStyleOptions = if (isDarkTheme) {
                 MapStyleOptions.loadRawResourceStyle(context, R.raw.map_dark_style)
             } else {
@@ -142,10 +145,16 @@ fun HomeScreen(
         )
     }
 
+    val mapUiSettings = remember(isLocationPermissionGranted) {
+        MapUiSettings(
+            zoomControlsEnabled = false,
+            compassEnabled = false,
+            myLocationButtonEnabled = isLocationPermissionGranted
+        )
+    }
+
     val circleStrokeColor = if (isDarkTheme) CyberpunkPink else CyberpunkPinkDark
     val circleFillColor = circleStrokeColor.copy(alpha = 0.2f)
-
-
 
     NetworkAwareContent {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -158,7 +167,7 @@ fun HomeScreen(
                         viewModel.setShowBottomSheet(true)
                     }
                 },
-                uiSettings = MapUiSettings(zoomControlsEnabled = false, compassEnabled = false),
+                uiSettings = mapUiSettings,
                 properties = mapProperties
             ) {
                 val activeAlarms by viewModel.activeAlarms.collectAsState()
@@ -177,6 +186,7 @@ fun HomeScreen(
                     )
                 }
             }
+
             SearchAndLocationBar(viewModel, cameraPositionState, context)
 
             if (showBottomSheet) {

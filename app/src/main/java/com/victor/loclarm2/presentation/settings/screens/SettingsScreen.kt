@@ -1,29 +1,58 @@
 package com.victor.loclarm2.presentation.settings.screens
 
-import android.app.Activity
-import android.content.Intent
-import android.media.RingtoneManager
-import android.net.Uri
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Straighten
+import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -57,27 +86,14 @@ fun SettingsScreen(
     var showRingtoneSheet by remember { mutableStateOf(false) }
 
     val availableRingtones = listOf(
-        "Ringtone 1" to R.raw.default_alarm_1,
-        "Ringtone 2" to R.raw.default_alarm_2,
-        "Ringtone 3" to R.raw.default_alarm_3,
-        "Ringtone 4" to R.raw.default_alarm_4
+        "Beep" to R.raw.beep_alarm,
+        "Incoming" to R.raw.incoming_alarm,
+        "Pleasant" to R.raw.pleasent_alarm,
     )
 
-    val ringtonePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                result.data?.getParcelableExtra(
-                    RingtoneManager.EXTRA_RINGTONE_PICKED_URI,
-                    Uri::class.java
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
-            }
-            uri?.let { viewModel.setRingtone(it.toString()) }
-        }
+    fun getRingtoneName(ringtoneValue: String): String {
+        return availableRingtones.find { it.second.toString() == ringtoneValue }?.first
+            ?: "Select Ringtone"
     }
 
     NetworkAwareContent {
@@ -156,15 +172,7 @@ fun SettingsScreen(
                         ModernSettingsItem(
                             icon = Icons.Default.MusicNote,
                             label = "Ringtone",
-                            value = ringtone.takeIf { it.contains("default_alarm") }?.let {
-                                when {
-                                    it.contains("1") -> "Ringtone 1"
-                                    it.contains("2") -> "Ringtone 2"
-                                    it.contains("3") -> "Ringtone 3"
-                                    it.contains("4") -> "Ringtone 4"
-                                    else -> "Default"
-                                }
-                            } ?: ringtone,
+                            value = getRingtoneName(ringtone),
                             onClick = { showRingtoneSheet = true }
                         )
 
@@ -447,7 +455,7 @@ fun SettingsScreen(
                             )
                         },
                         trailingContent = {
-                            if (ringtone.contains(resId.toString())) {
+                            if (ringtone == resId.toString()) {
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = "Selected",
