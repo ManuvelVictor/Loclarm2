@@ -1,4 +1,4 @@
-package com.victor.loclarm2.ui.theme
+package com.victor.loclarm2.presentation.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

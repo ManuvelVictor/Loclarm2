@@ -2,60 +2,43 @@ package com.victor.loclarm2.presentation.home.screens
 
 import android.annotation.SuppressLint
 import android.content.Context
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.LocationSearching
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.ShareLocation
+import androidx.compose.material.icons.filled.YoutubeSearchedFor
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.maps.android.compose.CameraPositionState
 import com.victor.loclarm2.presentation.home.viewmodel.HomeViewModel
-import com.victor.loclarm2.utils.GlassBox
 import kotlinx.coroutines.launch
 
 @SuppressLint("DefaultLocale")
@@ -73,7 +56,8 @@ fun SetAlarmBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDiscard,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        containerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
@@ -94,7 +78,8 @@ fun SetAlarmBottomSheet(
                         .padding(bottom = 16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
+                    ),
+                    shape = MaterialTheme.shapes.medium
                 ) {
                     Column(
                         modifier = Modifier.padding(12.dp)
@@ -105,7 +90,12 @@ fun SetAlarmBottomSheet(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "${String.format("%.6f", location.latitude)}, ${String.format("%.6f", location.longitude)}",
+                            text = "${
+                                String.format(
+                                    "%.6f",
+                                    location.latitude
+                                )
+                            }, ${String.format("%.6f", location.longitude)}",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -123,7 +113,7 @@ fun SetAlarmBottomSheet(
             )
 
             Text(
-                text = "Radius: ${selectedRadius.toInt()}m",
+                text = "Radius: ${selectedRadius.toInt()} m",
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -187,80 +177,46 @@ fun SetAlarmBottomSheet(
 }
 
 @Composable
-fun BottomNavigationBar(navController: NavController) {
+fun BottomNavigationBar(navController: NavController, viewModel: HomeViewModel) {
     val isDarkTheme = isSystemInDarkTheme()
     val selectedColor = MaterialTheme.colorScheme.primary
 
     val unselectedColor = if (isDarkTheme) {
         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
     } else {
-        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+        MaterialTheme.colorScheme.onSurfaceVariant
     }
 
-    val indicatorColor = if (isDarkTheme) {
-        selectedColor.copy(alpha = 0.2f)
-    } else {
-        selectedColor.copy(alpha = 0.15f)
-    }
+    val navBackStackEntry = navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry.value?.destination
 
-    GlassBox(
-        modifier = Modifier.fillMaxWidth()
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.background,
+        tonalElevation = 3.dp
     ) {
-        NavigationBar(
-            containerColor = Color.Transparent,
-            tonalElevation = 0.dp,
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        listOf(
+            Triple("home", Icons.Default.Home, "Home"),
+            Triple("alarms", Icons.Default.Notifications, "Alarms"),
+            Triple("settings", Icons.Default.Settings, "Settings")
+        ).forEach { (route, icon, label) ->
             NavigationBarItem(
-                selected = navController.currentDestination?.route == "home",
-                onClick = { navController.navigate("home") },
-                icon = {
-                    Icon(
-                        Icons.Default.Home,
-                        contentDescription = "Home"
-                    )
+                selected = currentDestination?.route == route,
+                onClick = {
+                    viewModel.clearSearchResults()
+                    navController.navigate(route) {
+                        launchSingleTop = true
+                        restoreState = true
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                    }
                 },
-                label = { Text("Home") },
+                icon = { Icon(icon, contentDescription = label) },
+                label = { Text(label) },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = selectedColor,
                     selectedTextColor = selectedColor,
-                    indicatorColor = indicatorColor,
-                    unselectedIconColor = unselectedColor,
-                    unselectedTextColor = unselectedColor
-                )
-            )
-            NavigationBarItem(
-                selected = navController.currentDestination?.route == "alarms",
-                onClick = { navController.navigate("alarms") },
-                icon = {
-                    Icon(
-                        Icons.Default.Notifications,
-                        contentDescription = "Alarms"
-                    )
-                },
-                label = { Text("Alarms") },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = selectedColor,
-                    selectedTextColor = selectedColor,
-                    indicatorColor = indicatorColor,
-                    unselectedIconColor = unselectedColor,
-                    unselectedTextColor = unselectedColor
-                )
-            )
-            NavigationBarItem(
-                selected = navController.currentDestination?.route == "settings",
-                onClick = { navController.navigate("settings") },
-                icon = {
-                    Icon(
-                        Icons.Default.Settings,
-                        contentDescription = "Settings"
-                    )
-                },
-                label = { Text("Settings") },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = selectedColor,
-                    selectedTextColor = selectedColor,
-                    indicatorColor = indicatorColor,
+                    indicatorColor = selectedColor.copy(alpha = 0.1f),
                     unselectedIconColor = unselectedColor,
                     unselectedTextColor = unselectedColor
                 )
@@ -269,6 +225,7 @@ fun BottomNavigationBar(navController: NavController) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchAndLocationBar(
     viewModel: HomeViewModel,
@@ -279,6 +236,7 @@ fun SearchAndLocationBar(
     var query by remember { mutableStateOf("") }
     val viewModelSearchResults = viewModel.searchResults.collectAsState()
     var searchResults by remember { mutableStateOf(emptyList<String>()) }
+    var isSearchActive by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModelSearchResults.value) {
         searchResults = viewModelSearchResults.value
@@ -286,93 +244,173 @@ fun SearchAndLocationBar(
 
     Column(
         modifier = Modifier
-            .padding(horizontal = 20.dp, vertical = 60.dp)
+            .padding(horizontal = 16.dp, vertical = 60.dp)
             .fillMaxWidth()
     ) {
-        GlassBox(
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .wrapContentHeight()
-                .padding(4.dp)
+                .wrapContentHeight(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            )
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    imageVector = Icons.Default.LocationSearching,
+                    contentDescription = "Search",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(30.dp)
                 )
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
-                TextField(
+                BasicTextField(
                     value = query,
                     onValueChange = {
                         query = it
+                        isSearchActive = it.isNotEmpty()
                         viewModel.searchLocation(it, context)
                     },
-                    placeholder = { Text("Alarm location?..") },
-                    singleLine = true,
                     modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = Color.Transparent,
-                        unfocusedPlaceholderColor = MaterialTheme.colorScheme.primary,
-                        focusedPlaceholderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedBorderColor = Color.Transparent
-                    )
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    singleLine = true,
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    decorationBox = { innerTextField ->
+                        Box(
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            if (query.isEmpty()) {
+                                Text(
+                                    text = "Search location...",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            innerTextField()
+                        }
+                    }
                 )
 
-                Spacer(modifier = Modifier.width(8.dp))
+                AnimatedVisibility(
+                    visible = query.isNotEmpty(),
+                    enter = fadeIn() + scaleIn(),
+                    exit = fadeOut() + scaleOut()
+                ) {
+                    IconButton(
+                        onClick = {
+                            query = ""
+                            searchResults = emptyList()
+                            isSearchActive = false
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = "Clear",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
 
-                IconButton(onClick = {
-                    viewModel.updateCurrentLocation(context, cameraPositionState)
-                    searchResults = emptyList()
-                }) {
+                Spacer(modifier = Modifier.width(4.dp))
+
+                VerticalDivider(
+                    modifier = Modifier
+                        .height(24.dp)
+                        .padding(horizontal = 4.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+
+                Spacer(modifier = Modifier.width(4.dp))
+
+                IconButton(
+                    onClick = {
+                        viewModel.updateCurrentLocation(context, cameraPositionState)
+                        searchResults = emptyList()
+                        query = ""
+                        isSearchActive = false
+                    },
+                    modifier = Modifier.size(40.dp),
+                ) {
                     Icon(
-                        imageVector = Icons.Default.LocationOn,
+                        imageVector = Icons.Default.ShareLocation,
                         contentDescription = "My Location",
-                        tint = MaterialTheme.colorScheme.primary
+                        modifier = Modifier.size(30.dp)
                     )
                 }
             }
         }
 
-        if (searchResults.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            GlassBox(
+        AnimatedVisibility(
+            visible = searchResults.isNotEmpty(),
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .wrapContentHeight()
-                    .padding(vertical = 4.dp)
+                    .padding(top = 8.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                )
             ) {
-                Column(modifier = Modifier.padding(8.dp)) {
-                    searchResults.forEach { placeName ->
-                        OutlinedButton(
-                            onClick = {
-                                query = placeName
-                                viewModel.searchLocation(placeName, context)
-                                scope.launch {
-                                    val latLng = viewModel.getLatLngFromPlace(placeName, context)
-                                    cameraPositionState.animate(
-                                        CameraUpdateFactory.newLatLngZoom(
-                                            latLng,
-                                            15f
-                                        )
-                                    )
-                                    searchResults = emptyList()
-                                }
+                LazyColumn(
+                    modifier = Modifier.padding(vertical = 8.dp)
+                ) {
+                    items(searchResults) { placeName ->
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    text = placeName,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            },
+                            leadingContent = {
+                                Icon(
+                                    imageVector = Icons.Default.Place,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            shape = MaterialTheme.shapes.large
-                        ) {
-                            Text(placeName, color = MaterialTheme.colorScheme.onSurface)
+                                .clickable {
+                                    query = placeName
+                                    viewModel.searchLocation(placeName, context)
+                                    scope.launch {
+                                        val latLng =
+                                            viewModel.getLatLngFromPlace(placeName, context)
+                                        cameraPositionState.animate(
+                                            CameraUpdateFactory.newLatLngZoom(latLng, 15f)
+                                        )
+                                        searchResults = emptyList()
+                                        isSearchActive = false
+                                    }
+                                },
+                            colors = ListItemDefaults.colors(
+                                containerColor = Color.Transparent
+                            )
+                        )
+
+                        if (placeName != searchResults.last()) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
                         }
                     }
                 }
@@ -389,23 +427,15 @@ fun AlarmTriggeredDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text("🚨 Location Alarm Triggered!")
-        },
-        text = {
-            Text("You have reached your destination: $alarmName\n\nWould you like to stop this alarm?")
-        },
+        title = { Text("🚨 Location Alarm Triggered!") },
+        text = { Text("You have reached your destination: $alarmName\n\nWould you like to stop this alarm?") },
         confirmButton = {
-            TextButton(
-                onClick = onStopAlarm
-            ) {
+            TextButton(onClick = onStopAlarm) {
                 Text("Stop Alarm")
             }
         },
         dismissButton = {
-            TextButton(
-                onClick = onDismiss
-            ) {
+            TextButton(onClick = onDismiss) {
                 Text("Keep Alarm")
             }
         }

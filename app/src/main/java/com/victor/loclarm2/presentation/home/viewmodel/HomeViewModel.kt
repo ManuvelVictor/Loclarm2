@@ -226,4 +226,8 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
+
+    fun clearSearchResults() {
+        _searchResults.value = emptyList()
+    }
 }
